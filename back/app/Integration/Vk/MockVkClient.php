@@ -35,7 +35,7 @@ class MockVkClient implements VkClient
     {
         $items = $this->wallPostFixtures($ownerId);
 
-        $sliced = array_values(array_slice($items, $offset, max(0, $count)));
+        $sliced = array_slice($items, $offset, max(0, $count));
 
         return [
             'count' => count($items),
