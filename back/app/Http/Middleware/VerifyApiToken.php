@@ -11,7 +11,7 @@ class VerifyApiToken
     public function handle(Request $request, Closure $next): Response
     {
         $token = $this->readToken($request);
-        $expected = env('API_TOKEN');
+        $expected = (string) config('api.token', '');
 
         if (empty($expected) || $token === null || ! hash_equals($expected, $token)) {
             return response()->json(['message' => 'Unauthorized.'], 401);
