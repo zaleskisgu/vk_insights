@@ -7,6 +7,32 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## VK Insights (этот репозиторий)
+
+Мини-приложение по [ТЗ](../docs/tz.md): Laravel + Vue (Vite), форма на главной, **`POST /report`** только из браузера (CSRF), пока мок VK.
+
+- **Документация по коду:** [docs/IMPLEMENTATION.md](../docs/IMPLEMENTATION.md), план: [docs/ROADMAP.md](../docs/ROADMAP.md).
+
+### Локальный запуск
+
+1. `cd` в каталог **`back/`**.
+2. `composer install`, скопировать `.env.example` → `.env`, `php artisan key:generate`.
+3. `npm install`.
+4. Разработка: в одном терминале **`npm run dev`**, в другом **`php artisan serve`** (или свой хост с корнем **`back/public`**). Открыть URL Laravel (часто `http://127.0.0.1:8000`).
+5. Продакшен-сборка фронта без `npm run dev`: **`npm run build`**.
+
+### Команды
+
+| Команда | Назначение |
+|---------|------------|
+| `composer phpstan` | Статический анализ PHP |
+| `php artisan test` | PHPUnit (unit-тесты) |
+| `npm run dev` / `npm run build` | Vite |
+
+На Windows при ошибке `php artisan serve` на портах можно раздавать приложение через **`php -S 127.0.0.1:8090 -t public`** из каталога `back` или через OSPanel.
+
+---
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

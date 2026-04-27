@@ -4,11 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Services\Report\ReportService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
-    public function __invoke(ReportService $reportService): JsonResponse
+    public function __invoke(Request $request, ReportService $reportService): JsonResponse
     {
+        $request->validate([
+            'group' => ['required', 'string', 'max:512'],
+            'from' => ['required', 'date'],
+            'to' => ['required', 'date', 'after_or_equal:from'],
+        ]);
+
         return response()->json($reportService->getReportData());
     }
 }

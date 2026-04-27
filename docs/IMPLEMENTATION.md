@@ -4,22 +4,24 @@
 
 ## Стек
 
-- **Laravel** (PHP), `routes/api.php` с префиксом `api/`.
+- **Backend:** **Laravel** (PHP). Отчёт по форме: **`POST /report`** в [`routes/web.php`](../back/routes/web.php) (стек `web`: сессия + CSRF). Отдельного `api`-файла маршрутов **нет** — намеренно, только `web` + `console`.
+- **Frontend:** **Vue 3** + **Vite** + **Tailwind CSS 4** + **PrimeVue** (тема Aura, тёмный режим). Точка входа: [`back/resources/js/app.js`](../back/resources/js/app.js), корневой компонент — [`back/resources/js/App.vue`](../back/resources/js/App.vue). Оболочка страницы: [`back/resources/views/app.blade.php`](../back/resources/views/app.blade.php). Главная (`GET /`) отдаёт это представление ([`back/routes/web.php`](../back/routes/web.php)).
 
-## REST API (фактически)
+## Маршруты (фактически)
 
 | Метод и путь | Назначение | Заметка к ТЗ |
 |--------------|------------|--------------|
-| `POST /api/report` | Ответ с «сырыми» данными группы и стены | В [tz.md](./tz.md) указаны `POST /analyze` и `GET /report/:groupId?...` — сейчас **один** защищённый `POST` вместо пары. |
+| `POST /report` | JSON-ответ с «сырыми» данными группы и стены (только из браузера, CSRF) | Тело запроса валидируется (`group`, `from`, `to`); сервис отчёта пока **не** использует эти поля. В [tz.md](./tz.md) указаны `POST /analyze` и `GET /report/:groupId?...` — сейчас **один** `POST` вместо пары. |
 | `GET /up` | Проверка живости (встроенный health Laravel) | В ТЗ — `GET /health`; путь **другой**. |
+
+**Файлы маршрутов:** только [`routes/web.php`](../back/routes/web.php) и [`routes/console.php`](../back/routes/console.php). Файла **`routes/api.php` нет** — префикса `/api` у приложения нет (см. [`bootstrap/app.php`](../back/bootstrap/app.php)).
 
 Все пути из [tz.md](./tz.md) (анализ, отчёт, период, `groupId`) **ещё не реализованы** как отдельные контракты.
 
-## Авторизация внутренних вызовов
+## Доступ к `POST /report`
 
-- Middleware **`api.token`**: `Authorization: Bearer <token>` или `X-Api-Token: <token>`.
-- Секрет: **`config('api.token')`** → переменная окружения `API_TOKEN`.
-- Без валидного токена — `401` и JSON `{"message":"Unauthorized."}`.
+- Отдельного **API-токена** и middleware вроде `VerifyApiToken` **нет**.
+- Доступ только **из браузера** на том же origin: сессия Laravel + заголовок **`X-XSRF-TOKEN`** (как у обычных web-форм). Это защита от CSRF, не вход пользователя по логину/паролю.
 
 ## Слой VK
 
@@ -37,12 +39,20 @@
 
 ## Что в репозитории не покрыто ТЗ (ещё)
 
-- **Фронтенд** (экран ввода, дашборд, график, состояния, адаптив) — вне текущей среды/папок, если не появилось отдельно.
+- **Фронтенд:** реализован **первый экран** (форма + `POST /report` с CSRF). **Дашборд** (таблица, график, экспорт), полная связка с отчётом и состояниями по ТЗ — **впереди**.
 - **PERF.md** — ожидается по [tz.md](./tz.md) как отдельный артефакт.
+
+## Инструменты разработки (PHP)
+
+- Статический анализ: **`composer phpstan`** ([`phpstan.neon`](../back/phpstan.neon), Larastan).
+- Тесты: **`php artisan test`** или **`vendor/bin/phpunit`** — в [`phpunit.xml`](../back/phpunit.xml) подключён только suite **`Unit`** ([`tests/Unit/ReportServiceTest.php`](../back/tests/Unit/ReportServiceTest.php)).
+
+## Локальный запуск приложения
+
+Краткая инструкция: [README проекта `back/`](../back/README.md). Типовой сценарий: каталог **`back/`**, `composer install`, `npm install`, настройка `.env`, при разработке пара процессов — **`npm run dev`** (Vite) и сервер Laravel (**`php artisan serve`** или встроенный `php -S … -t public` / виртуальный хост на `public`). Для проверки без dev-сервера фронта: **`npm run build`** и один процесс PHP.
 
 ## Переменные окружения (релевантно backend)
 
-- `API_TOKEN` — доступ к `POST /api/report`.
 - `VK_SERVICE_TOKEN`, `VK_API_VERSION` — на будущее для `HttpVkClient`.
 
-Итог: **базовая точка API + мок VK**; **основной объём ТЗ** (реальный VK, отчёт с метриками, кэш, эндпоинты и фронт) **впереди** — см. [ROADMAP.md](./ROADMAP.md).
+Итог: **POST /report (web + CSRF) + мок VK**; **основной объём ТЗ** (реальный VK, отчёт с метриками, кэш, фронт) **впереди** — см. [ROADMAP.md](./ROADMAP.md).
