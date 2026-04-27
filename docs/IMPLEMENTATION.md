@@ -1,58 +1,56 @@
-# Текущая реализация (backend)
+# Текущая реализация
 
-Снимок на момент разработки, без обещаний вне кода. Полное ТЗ: [tz.md](./tz.md).
+Снимок по коду репозитория. Полное ТЗ: [tz.md](./tz.md).
 
 ## Стек
 
-- **Backend:** **Laravel** (PHP). Отчёт по форме: **`POST /report`** в [`routes/web.php`](../back/routes/web.php) (стек `web`: сессия + CSRF). Отдельного `api`-файла маршрутов **нет** — намеренно, только `web` + `console`.
-- **Frontend:** **Vue 3** + **Vite** + **Tailwind CSS 4** + **PrimeVue** (тема Aura, тёмный режим). Точка входа: [`back/resources/js/app.js`](../back/resources/js/app.js), корневой компонент — [`back/resources/js/App.vue`](../back/resources/js/App.vue). Оболочка страницы: [`back/resources/views/app.blade.php`](../back/resources/views/app.blade.php). Главная (`GET /`) отдаёт это представление ([`back/routes/web.php`](../back/routes/web.php)).
+- **Backend:** **Laravel** (PHP). Маршруты в [`routes/web.php`](../routes/web.php) (группа `web`: сессия + CSRF). Отдельного `routes/api.php` **нет** — только `web` и `console` ([`bootstrap/app.php`](../bootstrap/app.php)).
+- **Frontend:** **Vue 3** + **Vite** + **SCSS** ([`resources/scss/app.scss`](../resources/scss/app.scss)) + **PrimeVue** (тёмная тема в разметке). Точка входа: [`resources/js/app.js`](../resources/js/app.js), корень — [`resources/js/App.vue`](../resources/js/App.vue). Оболочка: [`resources/views/app.blade.php`](../resources/views/app.blade.php). Главная `GET /` отдаёт это представление.
 
-## Маршруты (фактически)
+## Маршруты
 
-| Метод и путь | Назначение | Заметка к ТЗ |
-|--------------|------------|--------------|
-| `POST /report` | JSON-ответ с «сырыми» данными группы и стены (только из браузера, CSRF) | Тело запроса валидируется (`group`, `from`, `to`); сервис отчёта пока **не** использует эти поля. В [tz.md](./tz.md) указаны `POST /analyze` и `GET /report/:groupId?...` — сейчас **один** `POST` вместо пары. |
-| `GET /up` | Проверка живости (встроенный health Laravel) | В ТЗ — `GET /health`; путь **другой**. |
-
-**Файлы маршрутов:** только [`routes/web.php`](../back/routes/web.php) и [`routes/console.php`](../back/routes/console.php). Файла **`routes/api.php` нет** — префикса `/api` у приложения нет (см. [`bootstrap/app.php`](../back/bootstrap/app.php)).
-
-Все пути из [tz.md](./tz.md) (анализ, отчёт, период, `groupId`) **ещё не реализованы** как отдельные контракты.
+| Метод и путь | Назначение | Отличие от [tz.md](./tz.md) |
+|--------------|------------|-----------------------------|
+| `POST /report` | JSON с полями `group`, `wall` с мок-клиента VK | В ТЗ — `POST /analyze` и `GET /report/:groupId?from=&to=`; сейчас один `POST`, без `groupId` в URL. |
+| `GET /up` | Health Laravel | В ТЗ указан `GET /health`. |
 
 ## Доступ к `POST /report`
 
-- Отдельного **API-токена** и middleware вроде `VerifyApiToken` **нет**.
-- Доступ только **из браузера** на том же origin: сессия Laravel + заголовок **`X-XSRF-TOKEN`** (как у обычных web-форм). Это защита от CSRF, не вход пользователя по логину/паролю.
+Только с того же origin: сессия + заголовок **`X-XSRF-TOKEN`** ([`resources/js/csrf.js`](../resources/js/csrf.js)). Отдельного API-токена нет.
 
 ## Слой VK
 
-- Контракт **`App\Contracts\VkClient`**: `getGroupById(int)`, `getWall(int $ownerId, $count, $offset)` — в ответе ожидается форма тела, близкая к [groups.getById](https://dev.vk.com/ru/method/groups.getById) и [wall.get](https://dev.vk.com/ru/method/wall.get) (см. мок).
-- **`App\Integration\Vk\MockVkClient`**: сети нет; отдаёт структурированные мок-данные (группы + `profiles`, стена `count` + `items` с `likes`/`comments`/`reposts` и `attachments` под типы контента).
-- **`App\Integration\Vk\HttpVkClient`**: заготовка; методы **пока бросают** `RuntimeException` (живой VK в коде **не** подключён).
-- В **`AppServiceProvider`** в контейнере привязан **только** `MockVkClient` (без переключения `VK_USE_MOCK` / HTTP).
+- Контракт [`App\Contracts\VkClient`](../app/Contracts/VkClient.php): `getGroupById(int)`, `getWall(int $ownerId, int $count, int $offset)`.
+- [`MockVkClient`](../app/Integration/Vk/MockVkClient.php): без сети; мок группы и стены (`likes` / `comments` / `reposts`, `attachments`).
+- [`HttpVkClient`](../app/Integration/Vk/HttpVkClient.php): заготовка; при непустом токене методы по-прежнему бросают `RuntimeException` (живые запросы к API не реализованы).
+- [`AppServiceProvider`](../app/Providers/AppServiceProvider.php): в контейнере всегда привязан **`MockVkClient`**. В [`config/vk.php`](../config/vk.php) есть `use_mock`, `access_token`, `version`, но **переключение на HTTP по конфигу не подключено**.
 
-`config/vk.php` ( `VK_USE_MOCK`, `VK_SERVICE_TOKEN`, `VK_API_VERSION` ) есть под будущий реальный клиент, но **на выбор реализации в рантайме сейчас не влияет**.
+## Контроллер и бизнес-логика
 
-## Бизнес-логика
+- [`ReportController`](../app/Http/Controllers/ReportController.php): валидирует `group`, `from`, `to` (`from`/`to` — даты, `to` не раньше `from`).
+- [`ReportService::getReportData()`](../app/Services/Report/ReportService.php): **не получает** введённые поля; жёстко `groupId = 1`, `ownerId = -1`; возвращает сырой `group` + `wall` без агрегатов (топ, среднее, типы, динамика по дням).
 
-- **`App\Services\Report\ReportService`**: жёстко `groupId = 1` / `ownerId = -1`, вызывает `getGroupById` и `getWall`, кладёт результаты в `group` и `wall` без агрегатов.
-- **Нет**: периода `from`/`to`, пагинации, парсинга ссылки, топа, среднего, распределения по типам, динамики по дням, экспорта, кэша, логирования метрик VK.
+То есть форма и API принимают сообщество и период, но отчёт по ним **не строится**.
 
-## Что в репозитории не покрыто ТЗ (ещё)
+## Что из ТЗ пока не сделано
 
-- **Фронтенд:** реализован **первый экран** (форма + `POST /report` с CSRF). **Дашборд** (таблица, график, экспорт), полная связка с отчётом и состояниями по ТЗ — **впереди**.
-- **PERF.md** — ожидается по [tz.md](./tz.md) как отдельный артефакт.
+- Реальные `groups.getById` / `wall.get`, пагинация, фильтр по периоду, обработка ошибок VK (429 и т.д.).
+- Кэш 10–30 мин, логирование времени и числа запросов к VK.
+- Агрегаты дашборда, экспорт CSV/JSON.
+- **Фронтенд:** экран ввода и запрос [`AnalysisForm.vue`](../resources/js/components/AnalysisForm.vue) — есть **loading** и **ошибка**; при успехе данные только **`console.log`**, таблицы, графиков, экспорта и отдельного **пустого** состояния результата нет.
+- **PERF.md** в репозитории нет.
 
-## Инструменты разработки (PHP)
+## Инструменты (PHP)
 
-- Статический анализ: **`composer phpstan`** ([`phpstan.neon`](../back/phpstan.neon), Larastan).
-- Тесты: **`php artisan test`** или **`vendor/bin/phpunit`** — в [`phpunit.xml`](../back/phpunit.xml) подключён только suite **`Unit`** ([`tests/Unit/ReportServiceTest.php`](../back/tests/Unit/ReportServiceTest.php)).
+- Статический анализ: `composer phpstan` ([`phpstan.neon`](../phpstan.neon)).
+- Тесты: [`tests/Unit/ReportServiceTest.php`](../tests/Unit/ReportServiceTest.php) — юнит-связка мока `VkClient` и `ReportService`.
 
-## Локальный запуск приложения
+## Локальный запуск
 
-Краткая инструкция: [README проекта `back/`](../back/README.md). Типовой сценарий: каталог **`back/`**, `composer install`, `npm install`, настройка `.env`, при разработке пара процессов — **`npm run dev`** (Vite) и сервер Laravel (**`php artisan serve`** или встроенный `php -S … -t public` / виртуальный хост на `public`). Для проверки без dev-сервера фронта: **`npm run build`** и один процесс PHP.
+См. [README](../README.md): `composer install`, `npm install`, `.env`; для разработки — `npm run dev` и сервер Laravel (`php artisan serve` или аналог).
 
-## Переменные окружения (релевантно backend)
+## Переменные окружения (backend)
 
-- `VK_SERVICE_TOKEN`, `VK_API_VERSION` — на будущее для `HttpVkClient`.
+- `VK_SERVICE_TOKEN`, `VK_API_VERSION`, `VK_USE_MOCK` — описаны в конфиге; на текущую привязку `VkClient` в `AppServiceProvider` **не влияют** (всегда мок).
 
-Итог: **POST /report (web + CSRF) + мок VK**; **основной объём ТЗ** (реальный VK, отчёт с метриками, кэш, фронт) **впереди** — см. [ROADMAP.md](./ROADMAP.md).
+Итого: **форма + `POST /report` + мок VK и сырой ответ**; метрики дашборда, кэш, REST как в ТЗ, живой VK и **PERF.md** — вперёд, см. [ROADMAP.md](./ROADMAP.md).
