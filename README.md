@@ -9,7 +9,7 @@
 
 ## VK Insights (этот репозиторий)
 
-Мини-приложение по [ТЗ](./docs/tz.md): Laravel + Vue (Vite), форма на главной, **`POST /report`** только из браузера (CSRF), пока мок VK.
+Мини-приложение по [ТЗ](./docs/tz.md): Laravel + Vue (Vite), форма на главной, **`POST /report`** только из браузера (CSRF). После отправки формы открывается **дашборд** (графики + KPI); данные отчёта и ответы «как VK API» пока из **моков** в [`app/Integration/Vk/Mock/`](./app/Integration/Vk/Mock/). Аватар группы в моке — файл в **`public/media/vk/`** (см. [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md)).
 
 - **Документация по коду:** [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md), план: [docs/ROADMAP.md](./docs/ROADMAP.md).
 
