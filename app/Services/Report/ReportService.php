@@ -3,6 +3,9 @@
 namespace App\Services\Report;
 
 use App\Contracts\VkClient;
+use App\Integration\Vk\Mock\MockDashboardData;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
 
 class ReportService
 {
@@ -13,17 +16,64 @@ class ReportService
     /**
      * @return array<string, mixed>
      */
-    public function getReportData(): array
+    public function getReportData(string $groupInput, CarbonInterface $from, CarbonInterface $to): array
     {
-        $groupId = 1;
-        $ownerId = -$groupId;
+        $parsed = $this->parseGroupInput($groupInput);
+        $fixture = MockDashboardData::build(
+            Carbon::instance($from)->startOfDay(),
+            Carbon::instance($to)->startOfDay(),
+        );
 
-        $group = $this->vk->getGroupById($groupId);
-        $wall = $this->vk->getWall($ownerId);
+        $groupVk = $this->vk->getGroupById(1);
+        $first = $groupVk['groups'][0] ?? [];
 
         return [
-            'group' => $group,
-            'wall' => $wall,
+            'meta' => [
+                'name' => $parsed['name'],
+                'screen_name' => $parsed['screen_name'],
+                'members_count' => $fixture['members_count'],
+                'from' => Carbon::instance($from)->toDateString(),
+                'to' => Carbon::instance($to)->toDateString(),
+                'photo_200' => $first['photo_200'] ?? null,
+            ],
+            'summary' => $fixture['summary'],
+            'daily' => $fixture['daily'],
+            'top_posts' => $fixture['top_posts'],
+            'content_types' => $fixture['content_types'],
         ];
     }
+
+    /**
+     * @return array{name: string, screen_name: string}
+     */
+    private function parseGroupInput(string $raw): array
+    {
+        $s = trim($raw);
+        if ($s === '') {
+            return ['name' => 'Demo', 'screen_name' => 'demo'];
+        }
+
+        if (preg_match('#vk\.com/(?:club|public|event)?([a-zA-Z0-9_]+)#iu', $s, $m)) {
+            $slug = strtolower($m[1]);
+        } else {
+            $slug = strtolower(preg_replace('#^@#u', '', $s));
+            $slug = preg_replace('#[^a-z0-9_]#iu', '', $slug) ?: 'demo';
+        }
+
+        if (preg_match('/^[a-z]+$/', $slug) && strlen($slug) <= 4) {
+            $displayName = strtoupper($slug);
+        } else {
+            $parts = preg_split('#_+#', $slug) ?: [];
+            $displayName = implode(' ', array_map(
+                static fn (string $w): string => mb_convert_case($w, MB_CASE_TITLE, 'UTF-8'),
+                $parts,
+            ));
+            if ($displayName === '') {
+                $displayName = ucfirst($slug);
+            }
+        }
+
+        return ['name' => $displayName, 'screen_name' => $slug];
+    }
 }
+

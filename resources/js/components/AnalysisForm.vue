@@ -16,6 +16,8 @@ const dateTo = ref(dateToInit);
 const errorMessage = ref('');
 const loading = ref(false);
 
+const emit = defineEmits(['report']);
+
 function fillPreset(screenName) {
     community.value = screenName;
     errorMessage.value = '';
@@ -61,7 +63,6 @@ async function analyze() {
         });
 
         const body = await res.json().catch(() => ({}));
-        console.log('[VK Insights] Ответ', { status: res.status, body });
 
         if (!res.ok) {
             if (res.status === 419) {
@@ -74,7 +75,10 @@ async function analyze() {
             } else {
                 errorMessage.value = `Ошибка запроса (${res.status}).`;
             }
+            return;
         }
+
+        emit('report', body);
     } catch (e) {
         console.error('[VK Insights] Сеть или парсинг ответа', e);
         errorMessage.value = 'Не удалось выполнить запрос. Проверьте сеть и консоль.';

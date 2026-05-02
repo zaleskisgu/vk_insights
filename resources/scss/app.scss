@@ -9,11 +9,12 @@ $vk-btn-hover: #3a5fa3;
 $vk-link: #4c75a3;
 $vk-link-hover: #5d86b5;
 $vk-muted: #a3a3a3;
-$vk-radius: 9px;
+$vk-radius: 0.5625rem; // 9px
 $vk-logo-bg: #4c75a3;
 $max-content: 32rem;
 $max-hero: 42rem;
 $max-header: 72rem;
+$max-dashboard: 72rem;
 
 html.dark {
     color-scheme: dark;
@@ -52,11 +53,37 @@ body {
     margin: 0 auto;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    justify-content: space-between;
+    gap: 1rem;
     padding: 0.75rem 1rem;
 }
 
-@media (min-width: 768px) {
+.vk-header__brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.vk-header__new-search {
+    flex-shrink: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    color: $vk-muted;
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.vk-header__new-search:hover,
+.vk-header__new-search:focus-visible {
+    color: #d4d4d4;
+    text-decoration: underline;
+}
+
+@media (min-width: 48rem) {
     .vk-header__inner {
         padding-left: 1.5rem;
         padding-right: 1.5rem;
@@ -93,9 +120,16 @@ body {
     padding: 2.5rem 1rem 4rem;
 }
 
-@media (min-width: 768px) {
+.vk-main--dashboard {
+    align-items: stretch;
+    justify-content: flex-start;
+    padding-top: 1.5rem;
+    padding-bottom: 2.5rem;
+}
+
+@media (min-width: 48rem) {
     .vk-main {
-        padding-top: 4rem;
+        padding-top: 2rem;
         padding-bottom: 4rem;
     }
 }
@@ -110,13 +144,13 @@ body {
     letter-spacing: -0.02em;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 48rem) {
     .vk-hero__title {
         font-size: 1.875rem;
     }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 64rem) {
     .vk-hero__title {
         font-size: 2.25rem;
     }
@@ -131,7 +165,7 @@ body {
     color: $vk-muted;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 48rem) {
     .vk-hero__subtitle {
         font-size: 1rem;
     }
@@ -144,10 +178,10 @@ body {
     border: 1px solid $vk-border-subtle;
     background: $vk-card;
     padding: 1.5rem;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 0.625rem 2.5rem rgba(0, 0, 0, 0.35);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 48rem) {
     .vk-card {
         padding: 2rem;
     }
@@ -179,7 +213,7 @@ body {
     margin-bottom: 1.5rem;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 40rem) {
     .vk-dates {
         grid-template-columns: 1fr 1fr;
     }
@@ -226,7 +260,7 @@ body {
     color: #e57373;
     background: #3a1e1e;
     border: 1px solid #7f2323;
-    border-radius: 8px;
+    border-radius: 0.5rem;
 }
 
 // PrimeVue: инпуты и кнопка под макет (тёмные поля, сине-серая кнопка)
@@ -264,10 +298,238 @@ body {
     }
 
     .p-button:focus-visible {
-        box-shadow: 0 0 0 2px $vk-bg, 0 0 0 4px $vk-link;
+        box-shadow: 0 0 0 0.125rem $vk-bg, 0 0 0 0.25rem $vk-link;
     }
 
     .p-button:disabled {
         opacity: 0.65;
     }
+
+    .p-card {
+        background: $vk-card;
+        border: 1px solid $vk-border-subtle;
+        color: #e5e5e5;
+        box-shadow: 0 0.5rem 1.75rem rgba(0, 0, 0, 0.28);
+    }
+
+    .p-card-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #a3a3a3;
+    }
+
+    .p-card-body {
+        padding-top: 0.35rem;
+    }
+}
+
+.vk-dashboard {
+    width: 100%;
+    max-width: $max-dashboard;
+    margin: 0 auto;
+    padding: 0 1rem;
+
+    @media (min-width: 48rem) {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+}
+
+.vk-dash-profile-card {
+    margin-bottom: 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid $vk-border-subtle;
+    background: $vk-card;
+    box-shadow: 0 0.5rem 1.75rem rgba(0, 0, 0, 0.28);
+    overflow: hidden;
+}
+
+.vk-dash-profile__body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem 1.25rem;
+    padding: 1rem 1.25rem 1.15rem;
+}
+
+.vk-dash-profile__identity {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.vk-dash-profile__avatar {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid $vk-border-subtle;
+    background: #2a2a2a;
+}
+
+.vk-dash-profile__avatar--placeholder {
+    background: #2a2a2a;
+}
+
+.vk-dash-profile__text {
+    min-width: 0;
+}
+
+.vk-dash-profile__name {
+    margin: 0;
+    font-size: 1.375rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #fff;
+    line-height: 1.2;
+}
+
+.vk-dash-profile__line2 {
+    margin: 0.35rem 0 0.25rem;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: $vk-muted;
+}
+
+.vk-dash-profile__at {
+    color: #c4c4c4;
+}
+
+.vk-dash-profile__dot {
+    margin: 0 0.2rem;
+    color: $vk-muted;
+}
+
+.vk-dash-profile__period {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: $vk-muted;
+}
+
+.vk-dash-profile__export .p-button {
+    padding: 0.5rem 0.85rem;
+    min-width: auto;
+}
+
+.vk-dash-profile__export-inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.vk-dash-profile__export-inner .pi-angle-down {
+    font-size: 0.75rem;
+    opacity: 0.85;
+}
+
+.vk-dashboard__cards {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+
+    @media (min-width: 40rem) {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (min-width: 64rem) {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.vk-dash-card .p-card-body {
+    padding-top: 1rem;
+}
+
+.vk-dash-card__value {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.vk-dash-card__hint {
+    margin: 0.35rem 0 0;
+    font-size: 0.75rem;
+    color: $vk-muted;
+}
+
+.vk-dash-panel {
+    margin-bottom: 1rem;
+}
+
+.vk-dash-panel .p-card-title {
+    font-size: 1rem;
+}
+
+.vk-dash-panel--line .p-card-title {
+    margin-bottom: 0.625rem;
+}
+
+.vk-dash-panel--line .p-card-body {
+    padding: 1.25rem;
+}
+
+.vk-dashboard__row2 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+
+    @media (min-width: 64rem) {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.vk-dashboard__row2 .vk-dash-panel .p-card-title {
+    margin-bottom: 0.375rem;
+}
+
+.vk-shell .vk-dashboard__row2 .vk-dash-panel .p-card-body {
+    padding: 1rem;
+}
+
+.vk-chart-wrap {
+    position: relative;
+    box-sizing: border-box;
+}
+
+.vk-chart-wrap--compact {
+    height: 10.875rem;
+    min-height: 10.875rem;
+    max-height: 10.875rem;
+}
+
+.vk-chart-wrap--compact > div {
+    height: 100%;
+    max-height: 100%;
+    box-sizing: border-box;
+}
+
+.vk-chart-wrap--compact canvas {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.vk-chart-wrap--tall {
+    height: 18.28125rem;
+    min-height: 18.28125rem;
+    max-height: 18.28125rem;
+    padding: 1.25rem;
+    box-sizing: border-box;
+}
+
+.vk-chart-wrap--tall > div {
+    height: 100%;
+    max-height: 100%;
+    box-sizing: border-box;
+}
+
+.vk-chart-wrap--tall canvas {
+    max-width: 100%;
+    max-height: 100%;
 }
