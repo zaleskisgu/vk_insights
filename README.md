@@ -28,6 +28,7 @@
 |---------|------------|
 | `composer phpstan` | Статический анализ PHP |
 | `php artisan test` | PHPUnit (unit-тесты) |
+| `npm run test` / `npm run test:watch` | Vitest: клиент отчёта (`reportErrors`, `reportHttp`, `reportExportDownload`), см. [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md) |
 | `npm run dev` / `npm run build` | Vite |
 
 На Windows при ошибке `php artisan serve` на портах можно раздавать приложение через **`php -S 127.0.0.1:8090 -t public`** из корня проекта или через OSPanel.

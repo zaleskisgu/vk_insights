@@ -61,7 +61,7 @@
 
 ### Клиент API отчёта (Vue)
 
-- Папка **[`resources/js/api/report/`](../resources/js/api/report/)**: [`reportErrors.js`](../resources/js/api/report/reportErrors.js) (ошибки API и Laravel + текст для UI), [`reportHttp.js`](../resources/js/api/report/reportHttp.js) (`reportJsonHeaders`, `reportJsonGet`, `reportJsonPost`, `fetchReportDashboard`), [`reportExportDownload.js`](../resources/js/api/report/reportExportDownload.js) (экспорт + `triggerBrowserDownload`), barrel [`index.js`](../resources/js/api/report/index.js).
+- Папка **[`resources/js/api/report/`](../resources/js/api/report/)**: [`reportErrors.js`](../resources/js/api/report/reportErrors.js) (ошибки API и Laravel + текст для UI), [`reportHttp.js`](../resources/js/api/report/reportHttp.js) (`reportJsonHeaders`, `reportJsonGet`, `reportJsonPost`, `fetchReportDashboard`), [`reportExportDownload.js`](../resources/js/api/report/reportExportDownload.js) (экспорт + `triggerBrowserDownload`), barrel [`index.js`](../resources/js/api/report/index.js). Рядом лежат Vitest-файлы **`*.test.js`** для этих трёх модулей (см. раздел «Инструменты (JavaScript)» ниже).
 - [`resources/js/api/reportFetch.js`](../resources/js/api/reportFetch.js) — реэкспорт из `./report/index.js` для стабильного импорта `@/api/reportFetch.js` (в т.ч. `reportJsonHeaders`, `reportJsonGet`/`Post`, `fetchReportDashboard`, экспорт, ошибки).
   - Подпись **«Отчёт сгенерирован: …»** внизу [`DashboardScreen.vue`](../resources/js/screens/DashboardScreen.vue): текст из **`meta.generated_at`**, стили **`.vk-report-generated`** в `app.scss` (мелкий приглушённый шрифт, по центру, отступ сверху от таблицы).
 
@@ -86,6 +86,15 @@
 
 - Статический анализ: `composer phpstan` ([`phpstan.neon`](../phpstan.neon)) — при ошибке bootstrap Laravel см. логи / `.env`.
 - Тесты: [`tests/Unit/ReportServiceTest.php`](../tests/Unit/ReportServiceTest.php) — ответ `ReportService` и вызов `VkClient::getGroupById`.
+
+## Инструменты (JavaScript)
+
+- **Vitest** 3 + **jsdom**, окружение и маска файлов заданы в [`vite.config.js`](../vite.config.js) (`test.environment`, `test.include`: `resources/js/**/*.test.js`).
+- Запуск из корня репозитория: **`npm run test`** (один прогон), **`npm run test:watch`** (режим наблюдения).
+- Покрытие минимально сфокусировано на **обработке ошибок и клиенте отчёта**:
+  - [`reportErrors.test.js`](../resources/js/api/report/reportErrors.test.js) — `ReportApiError`, `messageFromLaravelBody`, `reportClientErrorMessage`;
+  - [`reportHttp.test.js`](../resources/js/api/report/reportHttp.test.js) — CSRF-заголовки, `reportJsonGet` / `reportJsonPost`, ошибки ответа, `fetchReportDashboard`;
+  - [`reportExportDownload.test.js`](../resources/js/api/report/reportExportDownload.test.js) — `POST /report/export`, разбор `Content-Disposition`, ошибки без чтения `blob`, `triggerBrowserDownload` (в jsdom для `URL.createObjectURL` используется временная подмена).
 
 ## Локальный запуск
 

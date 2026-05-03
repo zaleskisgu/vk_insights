@@ -18,6 +18,7 @@
 - Экспорт **JSON/CSV**: **`POST /report/export`** ([`ReportExportController`](../app/Http/Controllers/ReportExportController.php), [`ReportService::getExportData`](../app/Services/Report/ReportService.php), [`ReportCsvExporter`](../app/Services/Report/ReportCsvExporter.php)); UI — [`DashboardProfileCard.vue`](../resources/js/components/dashboard/DashboardProfileCard.vue) (кнопка «Экспорт» + меню, [`reportExportDownload`](../resources/js/api/report/reportExportDownload.js)).
 - Клиент отчёта на фронте разнесён по [`resources/js/api/report/`](../resources/js/api/report/) с barrel [`index.js`](../resources/js/api/report/index.js); совместимость — реэкспорт в [`reportFetch.js`](../resources/js/api/reportFetch.js); HTTP-слой — [`reportHttp.js`](../resources/js/api/report/reportHttp.js) (`reportJsonGet`, `reportJsonPost`, `fetchReportDashboard`; POST с CSRF для `/report/posts` и `/report/export`).
 - Стартовый экран: [`fetchReportDashboard`](../resources/js/api/report/reportHttp.js) (`GET /report`) в [`StartScreen.vue`](../resources/js/screens/StartScreen.vue).
+- Автотесты фронта (**Vitest** + jsdom): **`npm run test`** — слой [`resources/js/api/report/`](../resources/js/api/report/) (ошибки, HTTP, экспорт); подробности в [IMPLEMENTATION.md](./IMPLEMENTATION.md), раздел «Инструменты (JavaScript)».
 
 ## Приоритет 1 (ядро сдачи)
 
