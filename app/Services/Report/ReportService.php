@@ -27,20 +27,42 @@ class ReportService
         $groupVk = $this->vk->getGroupById(1);
         $first = $groupVk['groups'][0] ?? [];
 
+        $groupNumericId = (int) ($first['id'] ?? 1);
+
         return [
             'meta' => [
+                'group_query' => trim($groupInput),
                 'name' => $parsed['name'],
                 'screen_name' => $parsed['screen_name'],
+                'owner_id' => $groupNumericId > 0 ? -$groupNumericId : $groupNumericId,
                 'members_count' => $fixture['members_count'],
                 'from' => Carbon::instance($from)->toDateString(),
                 'to' => Carbon::instance($to)->toDateString(),
                 'photo_200' => $first['photo_200'] ?? null,
+                'generated_at' => now()->format('d.m.Y, H:i:s'),
             ],
             'summary' => $fixture['summary'],
             'daily' => $fixture['daily'],
             'top_posts' => $fixture['top_posts'],
             'content_types' => $fixture['content_types'],
         ];
+    }
+
+    /**
+     * Полный дамп для экспорта (дашборд + все посты периода, мок).
+     *
+     * @return array<string, mixed>
+     */
+    public function getExportData(string $groupInput, CarbonInterface $from, CarbonInterface $to): array
+    {
+        $data = $this->getReportData($groupInput, $from, $to);
+        $data['all_posts'] = MockDashboardData::allPosts(
+            Carbon::instance($from)->startOfDay(),
+            Carbon::instance($to)->startOfDay(),
+            trim($groupInput),
+        );
+
+        return $data;
     }
 
     /**

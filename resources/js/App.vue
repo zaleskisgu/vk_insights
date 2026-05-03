@@ -1,24 +1,44 @@
 <script setup>
-import { ref } from 'vue';
-import AppHeader from '@/components/AppHeader.vue';
-import AnalysisForm from '@/components/AnalysisForm.vue';
-import DashboardView from '@/components/DashboardView.vue';
+import { ref, watch, defineAsyncComponent } from 'vue';
+import AppHeader from '@/components/layout/AppHeader.vue';
+import StartScreen from '@/screens/StartScreen.vue';
+import { formatPeriodRu } from '@/utils/dashboardFormat.js';
+
+const DashboardScreen = defineAsyncComponent(() => import('@/screens/DashboardScreen.vue'));
 
 const report = ref(null);
+
+const TITLE_START = 'VK Insights';
+
+watch(
+    report,
+    (r) => {
+        if (!r) {
+            document.title = TITLE_START;
+            return;
+        }
+        const m = r.meta ?? {};
+        const name = typeof m.name === 'string' && m.name.trim() ? m.name.trim() : String(m.group_query ?? 'Сообщество');
+        const from = m.from;
+        const to = m.to;
+        const period = from && to ? formatPeriodRu(String(from), String(to)) : '';
+        document.title = period ? `${TITLE_START} - ${name} - ${period}` : `${TITLE_START} - ${name}`;
+    },
+    { immediate: true },
+);
 </script>
 
 <template>
     <div class="vk-shell">
         <AppHeader :show-new-search="!!report" @new-search="report = null" />
-        <main class="vk-main" :class="{ 'vk-main--dashboard': report }">
-            <template v-if="!report">
-                <h1 class="vk-hero__title">Аналитика сообществ ВКонтакте</h1>
-                <p class="vk-hero__subtitle">
-                    Введите ID или короткое имя сообщества и выберите период для анализа постов
-                </p>
-                <AnalysisForm @report="report = $event" />
-            </template>
-            <DashboardView v-else :report="report" />
+        <main id="vk-main" class="vk-main" :class="{ 'vk-main--dashboard': report }" tabindex="-1">
+            <StartScreen v-if="!report" @report="report = $event" />
+            <Suspense v-else>
+                <DashboardScreen :report="report" />
+                <template #fallback>
+                    <p class="vk-dashboard-loading" role="status">Загрузка отчёта…</p>
+                </template>
+            </Suspense>
         </main>
     </div>
 </template>

@@ -4,10 +4,15 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "test": "vitest run",
+        "test:watch": "vitest"
     },
     "devDependencies": {
         "@vitejs/plugin-vue": "^6.0.6",
+        "@vue/test-utils": "^2.4.6",
+        "jsdom": "^26.0.0",
+        "vitest": "^3.0.0",
         "concurrently": "^9.0.1",
         "laravel-vite-plugin": "^3.0.0",
         "sass": "^1.77.0",

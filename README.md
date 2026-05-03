@@ -9,9 +9,10 @@
 
 ## VK Insights (этот репозиторий)
 
-Мини-приложение по [ТЗ](./docs/tz.md): Laravel + Vue (Vite), форма на главной, **`POST /report`** только из браузера (CSRF). После отправки формы открывается **дашборд** (графики + KPI); данные отчёта и ответы «как VK API» пока из **моков** в [`app/Integration/Vk/Mock/`](./app/Integration/Vk/Mock/). Аватар группы в моке — файл в **`public/media/vk/`** (см. [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md)).
+Мини-приложение по [ТЗ](./docs/tz.md): Laravel + Vue (Vite), форма на главной, запрос отчёта **`GET /report`** с параметрами `group`, `from`, `to`; **`POST /report/posts`** и **`POST /report/export`** — с CSRF из браузера. После анализа открывается **дашборд** (графики + KPI и таблица **«Все посты»**); данные отчёта и ответы «как VK API» пока из **моков** в [`app/Integration/Vk/Mock/`](./app/Integration/Vk/Mock/). Аватар группы в моке — файл в **`public/media/vk/`** (см. [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md)).
 
-- **Документация по коду:** [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md), план: [docs/ROADMAP.md](./docs/ROADMAP.md).
+- **Документация по коду:** [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md), план: [docs/ROADMAP.md](./docs/ROADMAP.md), оптимизации и замеры сборки: [docs/PERF.md](./docs/PERF.md).
+- **Заголовок вкладки и фавикон:** по умолчанию в [`resources/views/app.blade.php`](./resources/views/app.blade.php); после открытия отчёта заголовок меняется в Vue ([`resources/js/App.vue`](./resources/js/App.vue)) — подробности в IMPLEMENTATION, раздел «Фронтенд».
 
 ### Локальный запуск
 
