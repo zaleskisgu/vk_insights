@@ -12,7 +12,7 @@ Route::get('/', function () {
 Route::get('health', function () {
     return response()->json([
         'status' => 'ok',
-        'vk_mode' => config('vk.use_mock', true) ? 'mock' : 'live',
+        'vk_mode' => config('vk.use_mock') ? 'mock' : 'live',
         'time' => now()->toIso8601String(),
     ]);
 });

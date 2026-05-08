@@ -42,7 +42,7 @@ final class WallPostsForReportLoader
     {
         $query = VkGroupInputParser::parse($groupInput)->query;
 
-        if (config('vk.use_mock', true) || (int) config('vk.cache_ttl', 0) <= 0 || $this->periodCache === null) {
+        if (config('vk.use_mock') || (int) config('vk.cache_ttl', 0) <= 0 || $this->periodCache === null) {
             return $this->loadUncachedForQuery($query, $from, $to);
         }
 

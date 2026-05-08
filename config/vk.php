@@ -1,15 +1,20 @@
 <?php
 
 $useMockEnv = env('VK_USE_MOCK');
+$tokenRaw = env('VK_SERVICE_TOKEN');
+$hasServiceToken = $tokenRaw !== null && trim((string) $tokenRaw) !== '';
+$forceMockFromEnv = $useMockEnv !== null && $useMockEnv !== '' && filter_var($useMockEnv, FILTER_VALIDATE_BOOLEAN);
+
 $cacheTtlEnv = env('VK_CACHE_TTL');
 $periodMaxDaysEnv = env('VK_PERIOD_MAX_DAYS');
 $wallMaxPagesEnv = env('VK_WALL_MAX_PAGES');
 $wallPageSizeEnv = env('VK_WALL_PAGE_SIZE');
 
 return [
-    // Из .env всегда строка: (bool) 'false' === true. Явный разбор как у FILTER_VALIDATE_BOOLEAN.
-    'use_mock' => $useMockEnv === null ? true : filter_var($useMockEnv, FILTER_VALIDATE_BOOLEAN),
-    'access_token' => env('VK_SERVICE_TOKEN'),
+    // Нет токена — только мок; иначе мок только при VK_USE_MOCK=true.
+    'use_mock' => ! $hasServiceToken || $forceMockFromEnv,
+    'has_service_token' => $hasServiceToken,
+    'access_token' => $tokenRaw,
     'version' => env('VK_API_VERSION', '5.199'),
     'integration_test_group_id' => filter_var(env('VK_INTEGRATION_TEST_GROUP_ID'), FILTER_VALIDATE_INT) ?: 22822305,
     // TTL кэша wall+group для live VK (сек). 0 — без кэша. Диапазон ТЗ: 600–1800.

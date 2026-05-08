@@ -93,6 +93,8 @@
 
 ## Env
 
-См. [`.env.example`](../.env.example), [`config/vk.php`](../config/vk.php): `VK_*`, `CACHE_STORE`, `REDIS_*`. Live: `VK_USE_MOCK=false` и непустой `VK_SERVICE_TOKEN`.
+[`.env.example`](../.env.example), [`config/vk.php`](../config/vk.php): `VK_*`, `CACHE_STORE`, `REDIS_*`.
 
-План: [ROADMAP.md](./ROADMAP.md).
+**Режим:** пустой / отсутствующий **`VK_SERVICE_TOKEN`** → всегда мок (`config('vk.use_mock')`), ответ **`meta.mock_notice`** и баннер на дашборде. **С токеном:** `VK_USE_MOCK=true` → мок; `false` или не задано → live API.
+
+Фикстуры мока: `app/Integration/Vk/Mock/`.

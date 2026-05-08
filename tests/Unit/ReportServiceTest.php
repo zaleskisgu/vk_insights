@@ -18,6 +18,7 @@ class ReportServiceTest extends TestCase
     public function test_get_report_data_includes_meta_and_dashboard_sections(): void
     {
         config()->set('vk.use_mock', true);
+        config()->set('vk.has_service_token', false);
 
         $groupVk = [
             'groups' => [
@@ -50,6 +51,10 @@ class ReportServiceTest extends TestCase
         $this->assertStringStartsWith('data:image/svg+xml;base64,', $result['meta']['photo_200']);
         $this->assertFalse($result['meta']['truncated']);
         $this->assertNull($result['meta']['posts_limit']);
+        $this->assertSame(
+            'Нет VK_SERVICE_TOKEN — показываются демо-данные (мок). Укажите токен в .env для запросов к API VK.',
+            $result['meta']['mock_notice'],
+        );
         $this->assertArrayHasKey('summary', $result);
         $this->assertArrayHasKey('daily', $result);
         $this->assertCount(3, $result['daily']);
@@ -62,6 +67,7 @@ class ReportServiceTest extends TestCase
     public function test_get_export_data_appends_all_posts(): void
     {
         config()->set('vk.use_mock', true);
+        config()->set('vk.has_service_token', false);
 
         $vk = $this->createMock(VkClient::class);
         $vk->method('getGroupById')->willReturn([

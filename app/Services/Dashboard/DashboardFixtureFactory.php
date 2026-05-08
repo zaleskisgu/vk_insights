@@ -29,7 +29,7 @@ final class DashboardFixtureFactory
         $fromC = Carbon::instance($from)->startOfDay();
         $toC = Carbon::instance($to)->startOfDay();
 
-        if (config('vk.use_mock', true)) {
+        if (config('vk.use_mock')) {
             $groupVk = $this->vk->getGroupById($parsed->query);
             $rawFirst = $groupVk['groups'][0] ?? [];
             $first = is_array($rawFirst) ? $rawFirst : [];

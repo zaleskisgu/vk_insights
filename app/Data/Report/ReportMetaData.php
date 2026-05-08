@@ -16,6 +16,7 @@ readonly class ReportMetaData
         public string $generated_at,
         public bool $truncated = false,
         public ?int $posts_limit = null,
+        public ?string $mock_notice = null,
     ) {}
 
     /**
@@ -35,6 +36,7 @@ readonly class ReportMetaData
             'generated_at' => $this->generated_at,
             'truncated' => $this->truncated,
             'posts_limit' => $this->posts_limit,
+            'mock_notice' => $this->mock_notice,
         ];
     }
 }

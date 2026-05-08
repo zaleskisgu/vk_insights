@@ -45,6 +45,14 @@ const truncatedNotice = computed(() => {
         <DashboardProfileCard :report="report" />
         <DashboardKpiCards :summary="summary" />
         <p
+            v-if="meta.mock_notice"
+            class="vk-dashboard-mock-notice"
+            role="status"
+            aria-live="polite"
+        >
+            {{ meta.mock_notice }}
+        </p>
+        <p
             v-if="truncatedNotice"
             class="vk-dashboard-truncated"
             role="status"

@@ -64,6 +64,13 @@ class ReportService
 
         $tz = (string) config('vk.timezone', config('app.timezone', 'UTC'));
 
+        $mockNotice = null;
+        if (config('vk.use_mock')) {
+            $mockNotice = config('vk.has_service_token')
+                ? 'VK_USE_MOCK=true: данные из фикстур (мок).'
+                : 'Нет VK_SERVICE_TOKEN — показываются демо-данные (мок). Укажите токен в .env для запросов к API VK.';
+        }
+
         $meta = new ReportMetaData(
             group_query: trim($groupInput),
             name: $bundle->name,
@@ -76,6 +83,7 @@ class ReportService
             generated_at: now()->setTimezone($tz)->format('d.m.Y, H:i:s'),
             truncated: $bundle->truncated,
             posts_limit: $bundle->postsLimit,
+            mock_notice: $mockNotice,
         );
 
         return [

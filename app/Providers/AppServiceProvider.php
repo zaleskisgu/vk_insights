@@ -17,7 +17,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(VkApiCallStats::class);
 
         $this->app->bind(VkClient::class, function ($app): VkClient {
-            if (config('vk.use_mock', true)) {
+            if (config('vk.use_mock')) {
                 return new MockVkClient;
             }
 
