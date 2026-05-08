@@ -1,12 +1,19 @@
 <?php
 
-namespace App\Services\Report;
+namespace App\Services\Export;
+
+use App\Data\Export\FullReportExportData;
 
 /**
  * Табличный экспорт отчёта для Excel (UTF-8 BOM, блоки с заголовком-строкой).
  */
 final class ReportCsvExporter
 {
+    public function buildFrom(FullReportExportData $export): string
+    {
+        return $this->build($export->toArray());
+    }
+
     /**
      * @param  array<string, mixed>  $data
      */
@@ -24,7 +31,7 @@ final class ReportCsvExporter
         $maxE = $summary['max_engagement'] ?? [];
 
         $this->section($fh, 'meta');
-        fputcsv($fh, [
+        $this->putCsv($fh, [
             'group_query',
             'name',
             'screen_name',
@@ -35,7 +42,7 @@ final class ReportCsvExporter
             'photo_200',
             'generated_at',
         ]);
-        fputcsv($fh, [
+        $this->putCsv($fh, [
             (string) ($meta['group_query'] ?? ''),
             (string) ($meta['name'] ?? ''),
             (string) ($meta['screen_name'] ?? ''),
@@ -48,7 +55,7 @@ final class ReportCsvExporter
         ]);
 
         $this->section($fh, 'summary');
-        fputcsv($fh, [
+        $this->putCsv($fh, [
             'total_posts',
             'avg_engagement',
             'most_active_day_date',
@@ -56,7 +63,7 @@ final class ReportCsvExporter
             'max_engagement_value',
             'max_engagement_date',
         ]);
-        fputcsv($fh, [
+        $this->putCsv($fh, [
             (string) ($summary['total_posts'] ?? ''),
             (string) ($summary['avg_engagement'] ?? ''),
             (string) ($most['date'] ?? ''),
@@ -66,12 +73,12 @@ final class ReportCsvExporter
         ]);
 
         $this->section($fh, 'daily');
-        fputcsv($fh, ['date', 'avg_engagement', 'posts_count']);
+        $this->putCsv($fh, ['date', 'avg_engagement', 'posts_count']);
         foreach ($data['daily'] ?? [] as $row) {
             if (! is_array($row)) {
                 continue;
             }
-            fputcsv($fh, [
+            $this->putCsv($fh, [
                 (string) ($row['date'] ?? ''),
                 (string) ($row['avg_engagement'] ?? ''),
                 (string) ($row['posts_count'] ?? ''),
@@ -79,12 +86,12 @@ final class ReportCsvExporter
         }
 
         $this->section($fh, 'top_posts');
-        fputcsv($fh, ['rank', 'engagement', 'date', 'likes', 'comments', 'post_id', 'text']);
+        $this->putCsv($fh, ['rank', 'engagement', 'date', 'likes', 'comments', 'post_id', 'text']);
         foreach ($data['top_posts'] ?? [] as $row) {
             if (! is_array($row)) {
                 continue;
             }
-            fputcsv($fh, [
+            $this->putCsv($fh, [
                 (string) ($row['rank'] ?? ''),
                 (string) ($row['engagement'] ?? ''),
                 (string) ($row['date'] ?? ''),
@@ -96,12 +103,12 @@ final class ReportCsvExporter
         }
 
         $this->section($fh, 'content_types');
-        fputcsv($fh, ['type', 'label', 'count']);
+        $this->putCsv($fh, ['type', 'label', 'count']);
         foreach ($data['content_types'] ?? [] as $row) {
             if (! is_array($row)) {
                 continue;
             }
-            fputcsv($fh, [
+            $this->putCsv($fh, [
                 (string) ($row['type'] ?? ''),
                 (string) ($row['label'] ?? ''),
                 (string) ($row['count'] ?? ''),
@@ -109,12 +116,12 @@ final class ReportCsvExporter
         }
 
         $this->section($fh, 'all_posts');
-        fputcsv($fh, ['post_id', 'date', 'type', 'label', 'likes', 'comments', 'reposts', 'engagement', 'text']);
+        $this->putCsv($fh, ['post_id', 'date', 'type', 'label', 'likes', 'comments', 'reposts', 'engagement', 'text']);
         foreach ($data['all_posts'] ?? [] as $row) {
             if (! is_array($row)) {
                 continue;
             }
-            fputcsv($fh, [
+            $this->putCsv($fh, [
                 (string) ($row['post_id'] ?? ''),
                 (string) ($row['date'] ?? ''),
                 (string) ($row['type'] ?? ''),
@@ -138,6 +145,15 @@ final class ReportCsvExporter
     private function section($fh, string $name): void
     {
         fwrite($fh, "\n");
-        fputcsv($fh, ['# '.$name]);
+        $this->putCsv($fh, ['# '.$name]);
+    }
+
+    /**
+     * @param  resource  $fh
+     * @param  list<string|int|float>  $fields
+     */
+    private function putCsv($fh, array $fields): void
+    {
+        fputcsv($fh, $fields, ',', '"', '\\');
     }
 }

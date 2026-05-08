@@ -3,15 +3,16 @@
 namespace App\Integration\Vk;
 
 use App\Contracts\VkClient;
+use App\Data\Vk\WallGetResultData;
 use App\Integration\Vk\Mock\MockGroupsGetByIdResponse;
 use App\Integration\Vk\Mock\MockWallGetItems;
 
 /**
- * Реализация {@see VkClient} на моках из {@see Mock\}.
+ * Реализация {@see VkClient} на моках VK-формата из {@see Mock\}.
  */
 class MockVkClient implements VkClient
 {
-    public function getGroupById(int $groupId): array
+    public function getGroupById(int|string $groupId): array
     {
         return MockGroupsGetByIdResponse::forGroupId($groupId);
     }
@@ -21,9 +22,6 @@ class MockVkClient implements VkClient
         $items = MockWallGetItems::all($ownerId);
         $sliced = array_slice($items, $offset, max(0, $count));
 
-        return [
-            'count' => count($items),
-            'items' => $sliced,
-        ];
+        return (new WallGetResultData(count($items), $sliced))->toArray();
     }
 }

@@ -1,13 +1,20 @@
 <?php
 
-namespace App\Services\Report;
+namespace App\Services\Posts;
 
-use App\Integration\Vk\Mock\MockDashboardData;
+use App\Data\Post\PostListItemData;
+use App\Integration\Vk\Mock\MockDashboardFixtureProvider;
+use App\Services\Vk\WallPostsForReportLoader;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 
 final class ReportPostsService
 {
+    public function __construct(
+        private WallPostsForReportLoader $wallPostsLoader,
+        private bool $dashboardFromVkWall,
+    ) {}
+
     /**
      * @return array{data: list<array<string, mixed>>, meta: array{total: int, filtered: int, page: int, per_page: int, last_page: int}}
      */
@@ -24,14 +31,28 @@ final class ReportPostsService
     ): array {
         $fromC = Carbon::instance($from)->startOfDay();
         $toC = Carbon::instance($to)->startOfDay();
-        $all = MockDashboardData::allPosts($fromC, $toC, $group);
+
+        if ($this->dashboardFromVkWall) {
+            $loaded = $this->wallPostsLoader->loadGroupAndPostsInPeriod($group, $fromC, $toC);
+            $all = array_map(
+                static fn (PostListItemData $p): array => $p->toArray(),
+                $loaded['posts'],
+            );
+        } else {
+            $fixture = new MockDashboardFixtureProvider($fromC, $toC);
+            $all = array_map(
+                static fn (PostListItemData $p): array => $p->toArray(),
+                $fixture->allPostItems($group),
+            );
+        }
+
         $total = count($all);
 
         $filtered = $all;
         if ($type !== 'all') {
             $filtered = array_values(array_filter(
                 $filtered,
-                static fn (array $r): bool => ($r['type'] ?? '') === $type,
+                static fn (array $r): bool => $r['type'] === $type,
             ));
         }
         if ($q !== null && $q !== '') {
@@ -40,7 +61,7 @@ final class ReportPostsService
                 $filtered = array_values(array_filter(
                     $filtered,
                     static function (array $r) use ($needle): bool {
-                        return mb_strpos(mb_strtolower((string) ($r['text'] ?? '')), $needle) !== false;
+                        return mb_strpos(mb_strtolower($r['text']), $needle) !== false;
                     },
                 ));
             }

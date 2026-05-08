@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\Report\ReportPostsService;
+use App\Services\Posts\ReportPostsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;

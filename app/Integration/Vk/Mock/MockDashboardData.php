@@ -6,7 +6,7 @@ use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 
 /**
- * Мок тела отчёта (summary, daily, top_posts, content_types, members_count) для дашборда.
+ * Мок тела отчёта дашборда (не ответ VK API): summary, daily, top_posts, content_types.
  */
 final class MockDashboardData
 {
@@ -255,7 +255,7 @@ final class MockDashboardData
                 'post_id' => $postId,
                 'date' => $dates[$g],
                 'type' => $type,
-                'label' => $labels[$type] ?? $type,
+                'label' => $labels[$type],
                 'text' => $textBody,
                 'likes' => $likes,
                 'comments' => $comments,

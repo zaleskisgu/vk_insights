@@ -12,7 +12,7 @@
 | Метод и путь | Назначение | Отличие от [tz.md](./tz.md) |
 |--------------|------------|-----------------------------|
 | `GET /report?group=&from=&to=` | JSON дашборда: `meta` (в т.ч. **`generated_at`** — момент сборки ответа), `summary`, `daily`, `top_posts`, `content_types` (мок-данные + аватар из мока VK). Параметры запроса: **`group`**, **`from`**, **`to`** (даты). | В ТЗ — `POST /analyze` и путь с `groupId`; здесь один **`GET`** с query, без CSRF-тела. |
-| `POST /report/export` | Скачивание отчёта: тело `group`, `from`, `to`, **`format`**: `json` \| `csv`. Ответ — файл (`application/json` или `text/csv; charset=UTF-8`, `Content-Disposition: attachment`). JSON = дашборд + **`all_posts`** (полный мок-список); CSV — блоки meta, summary, daily, top_posts, content_types, all_posts ([`ReportCsvExporter`](../app/Services/Report/ReportCsvExporter.php)). | В ТЗ — «экспорт отчёта»; формат запроса свой. |
+| `POST /report/export` | Скачивание отчёта: тело `group`, `from`, `to`, **`format`**: `json` \| `csv`. Ответ — файл (`application/json` или `text/csv; charset=UTF-8`, `Content-Disposition: attachment`). JSON = дашборд + **`all_posts`** (полный мок-список); CSV — блоки meta, summary, daily, top_posts, content_types, all_posts ([`ReportCsvExporter`](../app/Services/Export/ReportCsvExporter.php)). | В ТЗ — «экспорт отчёта»; формат запроса свой. |
 | `POST /report/posts` | Постраничный список постов за период (мок): тело `group`, `from`, `to`, опционально `page`, `per_page`, `sort`, `order`, `q`, `type`; ответ `{ data, meta }` с `meta.total`, `meta.filtered`, пагинацией | В ТЗ отдельного эндпоинта нет; данные из того же мока, что и дашборд. |
 | `GET /up` | Health Laravel | В ТЗ указан `GET /health`. |
 
@@ -25,20 +25,23 @@
 ## Слой VK и моки
 
 - Контракт [`App\Contracts\VkClient`](../app/Contracts/VkClient.php): `getGroupById(int)`, `getWall(int $ownerId, int $count, int $offset)`.
-- Папка **[`app/Integration/Vk/Mock/`](../app/Integration/Vk/Mock/)** — все тестовые ответы «как VK API» и мок дашборда:
+- Папка **[`app/Integration/Vk/Mock/`](../app/Integration/Vk/Mock/)** — тестовые ответы «как VK API» и генерация дашборда:
   - [`MockGroupsGetByIdResponse`](../app/Integration/Vk/Mock/MockGroupsGetByIdResponse.php) — тело `groups.getById` (аватар `photo_*` → локальный [`public/media/vk/group-photo.svg`](../public/media/vk/group-photo.svg)).
   - [`MockWallGetItems`](../app/Integration/Vk/Mock/MockWallGetItems.php) — элементы `wall.get`.
-  - [`MockDashboardData`](../app/Integration/Vk/Mock/MockDashboardData.php) — агрегаты дашборда по периоду (суточные ряды, summary, топ-10 с `post_id`, типы контента); метод **`allPosts($from, $to, $groupSeed)`** — полный список постов для таблицы «Все посты» (детерминированно от периода и строки запроса группы).
+  - [`MockDashboardData`](../app/Integration/Vk/Mock/MockDashboardData.php) — агрегаты по периоду (суточные ряды, summary, топ-10, типы контента) и полный список постов для «Все посты».
+  - [`MockDashboardFixtureProvider`](../app/Integration/Vk/Mock/MockDashboardFixtureProvider.php) — реализация [`DashboardFixtureProvider`](../app/Contracts/DashboardFixtureProvider.php): один расчёт периода для [`Summary` / `Daily` / `TopPosts` / `ContentTypes`](../app/Services/Dashboard/) dashboard-сервисов и для экспорта/постраничного списка.
 - [`MockVkClient`](../app/Integration/Vk/MockVkClient.php): без сети, проксирует в классы из `Mock/`.
-- [`HttpVkClient`](../app/Integration/Vk/HttpVkClient.php): заготовка; живые запросы не реализованы.
-- [`AppServiceProvider`](../app/Providers/AppServiceProvider.php): в контейнере всегда **`MockVkClient`**. В [`config/vk.php`](../config/vk.php) есть `use_mock`, `access_token`, `version`, но **переключение на HTTP по конфигу не подключено**.
+- [`HttpVkClient`](../app/Integration/Vk/HttpVkClient.php): живой VK — **POST** `https://api.vk.com/method/{method}` (form), разбор `response` / `error`; внутри — [`GroupsGetByIdMethod`](../app/Integration/Vk/Method/GroupsGetByIdMethod.php), [`WallGetMethod`](../app/Integration/Vk/Method/WallGetMethod.php); ответы приводятся к массивам через DTO в **[`app/Data/Vk/`](../app/Data/Vk/)** (в т.ч. разбор объекта `response` с `groups` / `profiles` у `groups.getById`).
+- [`AppServiceProvider`](../app/Providers/AppServiceProvider.php): **`VkClient`** — при `config('vk.use_mock')` **`MockVkClient`**, иначе **`HttpVkClient`** с `access_token` и `version` из [`config/vk.php`](../config/vk.php) (env: **`VK_USE_MOCK`**, **`VK_SERVICE_TOKEN`**, **`VK_API_VERSION`**). Пустой токен при живом клиенте даст ошибку при первом вызове API (см. `HttpVkClient`).
 
 ## Контроллер и отчёт
 
 - [`ReportController`](../app/Http/Controllers/ReportController.php): валидирует `group`, `from`, `to` (`from`/`to` — даты, `to` не раньше `from`), передаёт в сервис.
-- [`ReportService::getReportData($group, $from, $to)`](../app/Services/Report/ReportService.php): парсит ввод сообщества (ссылка `vk.com/...`, `@slug`, строка); **`meta`**: имя, `screen_name`, **`group_query`** (исходная строка запроса для последующих `POST /report/posts` и экспорта), **`owner_id`** (отрицательный id владельца стены для ссылок `wall`), `members_count`, период `from`/`to`, `photo_200` из ответа VK, **`generated_at`** — время генерации отчёта на сервере, строка **`д.м.Г, Ч:м:с`** в часовом поясе приложения (`config('app.timezone')`, формат через `now()->format(...)`); блоки дашборда из **`MockDashboardData::build()`** (агрегаты **не** считаются из `wall.get`, а из мок-генератора по датам).
-- [`ReportPostsController`](../app/Http/Controllers/ReportPostsController.php) + [`ReportPostsService::listPage`](../app/Services/Report/ReportPostsService.php): фильтр по типу контента и подстроке **`q`** в тексте поста, сортировка и пагинация по уже сгенерированному мок-списку.
-- [`ReportExportController`](../app/Http/Controllers/ReportExportController.php): валидация `group`, `from`, `to`, `format`; данные из [`ReportService::getExportData()`](../app/Services/Report/ReportService.php) (дашборд + **`all_posts`** через **`MockDashboardData::allPosts`**).
+- [`ReportService`](../app/Services/ReportService.php) (`getReportData` / `getExportData`): парсит ввод сообщества (ссылка `vk.com/...`, `@slug`, строка); **`meta`**: имя, `screen_name`, **`group_query`**, **`owner_id`**, `members_count`, период `from`/`to`, `photo_200` из ответа **`VkClient::getGroupById`**, **`generated_at`** — время генерации (`d.m.Y, H:i:s`, часовой пояс `config('app.timezone')`); блоки дашборда собирают четыре сервиса в [`app/Services/Dashboard/`](../app/Services/Dashboard/) по **`MockDashboardFixtureProvider`** (агрегаты **не** из реальной стены, а из мок-генератора по датам).
+- [`ReportPostsController`](../app/Http/Controllers/ReportPostsController.php) + [`ReportPostsService::listPage`](../app/Services/Posts/ReportPostsService.php): фильтр по типу контента и подстроке **`q`**, сортировка и пагинация по тому же мок-списку, что и у фикстуры отчёта.
+- [`ReportExportController`](../app/Http/Controllers/ReportExportController.php): валидация `group`, `from`, `to`, `format`; данные из **`ReportService::getExportData()`** (дашборд + **`all_posts`** через провайдер фикстур).
+
+Структурированные модели ответа (мета отчёта, строки таблиц и т.д.) — в **[`app/Data/`](../app/Data/)** (`ReportMetaData`, элементы постов и др.) с методами `toArray()` там, где нужно для JSON/экспорта.
 
 ## Фронтенд
 
@@ -76,16 +79,18 @@
 
 ## Что из ТЗ пока не сделано
 
-- Реальные `groups.getById` / `wall.get`, пагинация, фильтр постов по периоду из стены, обработка ошибок VK (429 и т.д.).
-- Связка агрегатов дашборда с **реальными** данными стены (сейчас только мок `MockDashboardData`).
+- Использование **`HttpVkClient` в HTTP-отчёте** (подстановка реального id группы из ввода, полная выборка стены за период, пагинация `wall.get`, фильтр по датам, политика 429 / retry).
+- Связка агрегатов дашборда с **реальными** данными стены (сейчас только мок через `MockDashboardFixtureProvider` / `MockDashboardData`).
 - Кэш 10–30 мин, логирование времени и числа запросов к VK.
+
+При этом **клиент к API** (`HttpVkClient` + методы + DTO) уже есть; проверка — юнит-тест [`HttpVkClientTest`](../tests/Unit/HttpVkClientTest.php) и при наличии токена — интеграционный [`VkHttpClientIntegrationTest`](../tests/Integration/VkHttpClientIntegrationTest.php) (сеть, `VK_SERVICE_TOKEN`; опционально `VK_INTEGRATION_TEST_GROUP_ID`).
 
 См. также описание оптимизаций и замеров сборки: [`PERF.md`](./PERF.md).
 
 ## Инструменты (PHP)
 
 - Статический анализ: `composer phpstan` ([`phpstan.neon`](../phpstan.neon)) — при ошибке bootstrap Laravel см. логи / `.env`.
-- Тесты: [`tests/Unit/ReportServiceTest.php`](../tests/Unit/ReportServiceTest.php) — ответ `ReportService` и вызов `VkClient::getGroupById`.
+- Тесты: **`php artisan test`** — в [`phpunit.xml`](../phpunit.xml) два suite: **Unit** (в т.ч. [`ReportServiceTest`](../tests/Unit/ReportServiceTest.php), сервисы дашборда, [`HttpVkClientTest`](../tests/Unit/HttpVkClientTest.php), посты, CSV) и **Integration** ([`VkHttpClientIntegrationTest`](../tests/Integration/VkHttpClientIntegrationTest.php), без токена помечается skipped).
 
 ## Инструменты (JavaScript)
 
@@ -102,6 +107,6 @@
 
 ## Переменные окружения (backend)
 
-- `VK_SERVICE_TOKEN`, `VK_API_VERSION`, `VK_USE_MOCK` — в конфиге; на текущую привязку `VkClient` в `AppServiceProvider` **не влияют** (всегда мок).
+- **`VK_SERVICE_TOKEN`**, **`VK_API_VERSION`**, **`VK_USE_MOCK`**, **`VK_INTEGRATION_TEST_GROUP_ID`** — см. [`config/vk.php`](../config/vk.php) и [`.env.example`](../.env.example). При **`VK_USE_MOCK=false`** нужен непустой **`VK_SERVICE_TOKEN`**; иначе контейнер отдаст `HttpVkClient`, но вызовы API упадут с сообщением о пустом токене.
 
-Итого: **форма → `GET /report?…` → мок-дашборд + мок VK для аватара**; таблица **«Все посты»** — **`POST /report/posts`**; экспорт — **`POST /report/export`** (JSON/CSV, мок); живой VK, кэш, REST как в ТЗ и **PERF.md** — вперёд, см. [ROADMAP.md](./ROADMAP.md).
+Итого: **форма → `GET /report?…` → мок-дашборд + `VkClient` (мок) для полей группы в `meta`**; таблица **«Все посты»** — **`POST /report/posts`**; экспорт — **`POST /report/export`** (JSON/CSV, мок); связка отчёта с живым VK, кэш, REST как в ТЗ и **PERF.md** — см. [ROADMAP.md](./ROADMAP.md).

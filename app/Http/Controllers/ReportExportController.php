@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\Report\ReportCsvExporter;
-use App\Services\Report\ReportService;
+use App\Services\Export\ReportCsvExporter;
+use App\Services\ReportService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
