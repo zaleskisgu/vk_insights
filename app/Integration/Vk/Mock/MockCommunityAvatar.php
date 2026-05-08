@@ -11,9 +11,6 @@ final class MockCommunityAvatar
     {
         $raw = trim($label);
         $chars = $raw !== '' ? mb_strtoupper(mb_substr($raw, 0, 2)) : '?';
-        if (mb_strlen($chars) < 1) {
-            $chars = '?';
-        }
 
         $text = htmlspecialchars($chars, ENT_XML1 | ENT_QUOTES, 'UTF-8');
         $svg = <<<SVG

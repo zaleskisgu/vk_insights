@@ -1,11 +1,122 @@
 # Текущая реализация
 
-Снимок по коду репозитория. Полное ТЗ: [tz.md](./tz.md).
+Снимок по коду репозитория. Полное ТЗ: [tz.md](./tz.md). Краткий вход: [README](../README.md).
 
 ## Стек
 
 - **Backend:** **Laravel** (PHP). Маршруты в [`routes/web.php`](../routes/web.php) (группа `web`: сессия, middleware в т.ч. **VerifyCsrfToken** для `POST`/`PUT` и т.д.). Отдельного `routes/api.php` **нет** — только `web` и `console` ([`bootstrap/app.php`](../bootstrap/app.php)). Запрос **`GET /report`** CSRF-токеном не сопровождается (типичное поведение Laravel для безопасных методов).
 - **Frontend:** **Vue 3** + **Vite** + **SCSS** ([`resources/scss/app.scss`](../resources/scss/app.scss)) + **PrimeVue** + **Chart.js** (через `primevue/chart`). Точка входа: [`resources/js/app.js`](../resources/js/app.js), корень — [`resources/js/App.vue`](../resources/js/App.vue). Оболочка: [`resources/views/app.blade.php`](../resources/views/app.blade.php). Главная `GET /` отдаёт это представление.
+
+## Структура проекта
+
+Корень репозитория (где лежат `artisan`, `composer.json`, `package.json`):
+
+```text
+.
+├── app/
+│   ├── Contracts/                 # VkClient, DashboardFixtureProvider
+│   ├── Data/
+│   │   ├── Dashboard/             # SummaryData, DailyRowData, TopPostRowData, ContentTypeRowData
+│   │   ├── Export/                # FullReportExportData
+│   │   ├── Post/                  # PostListItemData, PostListPageData
+│   │   ├── Report/                # ReportMetaData
+│   │   └── Vk/                    # DTO VK API (группа, wall.get, …)
+│   ├── Http/
+│   │   ├── Controllers/           # Report*, единый Controller
+│   │   ├── Middleware/            # LogVkApiCallStats
+│   │   └── Requests/              # ReportPeriodRequest и наследники
+│   ├── Integration/Vk/
+│   │   ├── Exception/             # ошибки VK / HTTP / сеть
+│   │   ├── Method/                # GroupsGetByIdMethod, WallGetMethod
+│   │   ├── Mock/                  # фикстуры API и MockDashboardFixtureProvider, MockCommunityAvatar
+│   │   ├── Support/               # парсер группы, кэш стены, live-провайдер, статистика вызовов
+│   │   ├── HttpVkClient.php
+│   │   └── MockVkClient.php
+│   ├── Providers/AppServiceProvider.php
+│   └── Services/
+│       ├── Dashboard/             # сборка дашборда, DashboardFixtureFactory / Bundle
+│       ├── Export/                # ReportCsvExporter
+│       ├── Posts/                 # ReportPostsService
+│       ├── Vk/                    # WallPostsForReportLoader, VkWallPostNormalizer
+│       └── ReportService.php
+├── bootstrap/                     # app.php, кэш провайдеров (генерируется)
+├── config/                        # в т.ч. vk.php, cache.php, logging.php
+├── database/                      # миграции, SQLite при локальной работе
+├── docker/
+│   └── entrypoint.sh
+├── docs/                          # tz, IMPLEMENTATION, ROADMAP, PERF, images/
+├── public/                        # index.php, favicon, сборка Vite → public/build/
+├── resources/
+│   ├── js/
+│   │   ├── api/report/            # reportHttp, reportErrors, reportExportDownload, *.test.js
+│   │   ├── api/reportFetch.js    # реэкспорт для @/api/reportFetch.js
+│   │   ├── components/dashboard/
+│   │   ├── components/layout/
+│   │   ├── locales/
+│   │   ├── screens/               # StartScreen, DashboardScreen
+│   │   ├── utils/                 # reportUrl, dashboardFormat, vkWallPostUrl, chartTheme
+│   │   ├── App.vue
+│   │   ├── app.js
+│   │   └── csrf.js
+│   ├── scss/app.scss
+│   └── views/app.blade.php
+├── routes/web.php                 # /, health, report*, только web-маршруты
+├── tests/
+│   ├── Integration/
+│   │   └── VkHttpClientIntegrationTest.php   # live VK; без VK_SERVICE_TOKEN — skipped
+│   ├── Unit/                      # сервисы дашборда, ReportService, посты, CSV, HttpVkClient
+│   └── TestCase.php
+├── artisan
+├── composer.json
+├── docker-compose.yml
+├── Dockerfile
+├── package.json
+├── phpstan.neon
+├── phpunit.xml
+└── vite.config.js
+```
+
+В дереве не перечислены **`vendor/`**, **`node_modules/`**, артефакты кэша (**`bootstrap/cache/`**, скомпилированные views в **`storage/framework/views/`**) и журналы — они генерируются или ставятся зависимостями.
+
+## Команды
+
+Рабочий каталог — **корень репозитория**. PHP **8.4+** (см. [`composer.json`](../composer.json)).
+
+### Одной таблицей
+
+| Команда | Назначение |
+|---------|------------|
+| `composer install` | Зависимости PHP |
+| `composer setup` | Цепочка из [`composer.json`](../composer.json): `composer install`, при отсутствии `.env` копирует `.env.example`, `key:generate`, `migrate --force`, `npm install --ignore-scripts`, `npm run build` |
+| `composer dev` | Одновременно: `php artisan serve`, `php artisan queue:listen`, `npm run dev` (через `concurrently`) |
+| `composer test` | `php artisan config:clear`, затем **`php artisan test`** (PHPUnit) |
+| `composer phpstan` | Статический анализ: `phpstan analyse --memory-limit=512M` ([`phpstan.neon`](../phpstan.neon), Larastan). При ошибке bootstrap проверьте `.env` и логи |
+| `php artisan test` | Тесты без предварительного `config:clear` |
+| `php artisan serve` | Встроенный сервер Laravel (корень **`public/`**), обычно порт 8000 |
+| `npm install` | Зависимости фронта |
+| `npm run dev` | Vite dev server |
+| `npm run build` | Production-сборка JS/CSS → **`public/build/`** |
+| `npm run test` | Vitest: один прогон ([`vite.config.js`](../vite.config.js): `resources/js/**/*.test.js`) |
+| `npm run test:watch` | Vitest в режиме наблюдения |
+| `docker compose up --build` | См. раздел [Docker](#docker) ниже |
+
+### PHP-тесты ([`phpunit.xml`](../phpunit.xml))
+
+- **Unit:** [`tests/Unit/`](../tests/Unit/) — сервисы дашборда (`ContentTypes`, `Daily`, `Summary`, `TopPosts`), [`ReportServiceTest`](../tests/Unit/ReportServiceTest.php), [`ReportPostsServiceTest`](../tests/Unit/ReportPostsServiceTest.php), [`ReportCsvExporterTest`](../tests/Unit/ReportCsvExporterTest.php), [`HttpVkClientTest`](../tests/Unit/HttpVkClientTest.php).
+- **Integration:** [`VkHttpClientIntegrationTest`](../tests/Integration/VkHttpClientIntegrationTest.php) — реальные вызовы VK; без **`VK_SERVICE_TOKEN`** тест **skipped**; опционально **`VK_INTEGRATION_TEST_GROUP_ID`** в `.env`.
+
+### Frontend-тесты (Vitest + jsdom)
+
+Файлы рядом с кодом:
+
+- [`reportErrors.test.js`](../resources/js/api/report/reportErrors.test.js)
+- [`reportHttp.test.js`](../resources/js/api/report/reportHttp.test.js)
+- [`reportExportDownload.test.js`](../resources/js/api/report/reportExportDownload.test.js)
+
+### Прочее
+
+- Форматирование PHP (опционально): `vendor/bin/pint` ([Laravel Pint](../composer.json) в `require-dev`).
+- Локальный запуск без Docker: см. [README](../README.md), раздел «Локальный запуск»; на Windows при занятом порту: `php -S 127.0.0.1:8090 -t public`.
 
 ## Маршруты
 
@@ -73,7 +184,7 @@
 
 ### Клиент API отчёта (Vue)
 
-- Папка **[`resources/js/api/report/`](../resources/js/api/report/)**: [`reportErrors.js`](../resources/js/api/report/reportErrors.js) (ошибки API и Laravel + текст для UI), [`reportHttp.js`](../resources/js/api/report/reportHttp.js) (`reportJsonHeaders`, `reportJsonGet`, `reportJsonPost`, `fetchReportDashboard`), [`reportExportDownload.js`](../resources/js/api/report/reportExportDownload.js) (экспорт + `triggerBrowserDownload`), barrel [`index.js`](../resources/js/api/report/index.js). Рядом лежат Vitest-файлы **`*.test.js`** для этих трёх модулей (см. раздел «Инструменты (JavaScript)» ниже).
+- Папка **[`resources/js/api/report/`](../resources/js/api/report/)**: [`reportErrors.js`](../resources/js/api/report/reportErrors.js) (ошибки API и Laravel + текст для UI), [`reportHttp.js`](../resources/js/api/report/reportHttp.js) (`reportJsonHeaders`, `reportJsonGet`, `reportJsonPost`, `fetchReportDashboard`), [`reportExportDownload.js`](../resources/js/api/report/reportExportDownload.js) (экспорт + `triggerBrowserDownload`), barrel [`index.js`](../resources/js/api/report/index.js). Рядом лежат Vitest-файлы **`*.test.js`** для этих трёх модулей (см. раздел [Команды](#команды)).
 - [`resources/js/api/reportFetch.js`](../resources/js/api/reportFetch.js) — реэкспорт из `./report/index.js` для стабильного импорта `@/api/reportFetch.js` (в т.ч. `reportJsonHeaders`, `reportJsonGet`/`Post`, `fetchReportDashboard`, экспорт, ошибки).
   - Подпись **«Отчёт сгенерирован: …»** внизу [`DashboardScreen.vue`](../resources/js/screens/DashboardScreen.vue): текст из **`meta.generated_at`**, стили **`.vk-report-generated`** в `app.scss` (мелкий приглушённый шрифт, по центру, отступ сверху от таблицы).
 
@@ -93,33 +204,16 @@
 
 Проверка клиента VK: [`HttpVkClientTest`](../tests/Unit/HttpVkClientTest.php), при **`VK_SERVICE_TOKEN`** — [`VkHttpClientIntegrationTest`](../tests/Integration/VkHttpClientIntegrationTest.php). Оптимизации фронта и сборки: [`PERF.md`](./PERF.md).
 
-## Инструменты (PHP)
-
-- Статический анализ: `composer phpstan` ([`phpstan.neon`](../phpstan.neon)) — при ошибке bootstrap Laravel см. логи / `.env`.
-- Тесты: **`php artisan test`** — в [`phpunit.xml`](../phpunit.xml) два suite: **Unit** (в т.ч. [`ReportServiceTest`](../tests/Unit/ReportServiceTest.php), сервисы дашборда, [`HttpVkClientTest`](../tests/Unit/HttpVkClientTest.php), посты, CSV) и **Integration** ([`VkHttpClientIntegrationTest`](../tests/Integration/VkHttpClientIntegrationTest.php), без токена помечается skipped).
-
-## Инструменты (JavaScript)
-
-- **Vitest** 3 + **jsdom**, окружение и маска файлов заданы в [`vite.config.js`](../vite.config.js) (`test.environment`, `test.include`: `resources/js/**/*.test.js`).
-- Запуск из корня репозитория: **`npm run test`** (один прогон), **`npm run test:watch`** (режим наблюдения).
-- Покрытие минимально сфокусировано на **обработке ошибок и клиенте отчёта**:
-  - [`reportErrors.test.js`](../resources/js/api/report/reportErrors.test.js) — `ReportApiError`, `messageFromLaravelBody`, `reportClientErrorMessage`;
-  - [`reportHttp.test.js`](../resources/js/api/report/reportHttp.test.js) — CSRF-заголовки, `reportJsonGet` / `reportJsonPost`, ошибки ответа, `fetchReportDashboard`;
-  - [`reportExportDownload.test.js`](../resources/js/api/report/reportExportDownload.test.js) — `POST /report/export`, разбор `Content-Disposition`, ошибки без чтения `blob`, `triggerBrowserDownload` (в jsdom для `URL.createObjectURL` используется временная подмена).
-
-## Локальный запуск
-
-См. [README](../README.md): **PHP 8.4+**, `composer install`, `npm install`, `.env`; для разработки — `npm run dev` и сервер Laravel (`php artisan serve` или аналог).
-
 ## Docker
 
 Файлы в корне репозитория: [`docker-compose.yml`](../docker-compose.yml) (сервисы **`redis`** и **`app`**), [`Dockerfile`](../Dockerfile), [`docker/entrypoint.sh`](../docker/entrypoint.sh).
 
-- **Запуск одной командой:** `docker compose up --build` (см. README).
+- **Запуск одной командой:** `docker compose up --build` (обзор для браузера: [README](../README.md)).
 - **Фронт в образе:** многостадийная сборка — стадия Node выполняет **`npm ci`** и **`npm run build`**, финальный образ PHP получает только **`public/build`** (отдельно `npm run dev` в контейнере не нужен).
 - **PHP:** образ на базе **php:8.4-cli**; расширения: intl, pdo_sqlite, zip, redis (phpredis); для сборки **pdo_sqlite** в образ ставится **`libsqlite3-dev`**.
 - **Окружение:** в Compose у **`app`** заданы **`APP_URL=http://localhost:8080`**, **`REDIS_HOST=redis`**, **`CACHE_STORE=redis`**, **`SESSION_DRIVER=file`**, **`QUEUE_CONNECTION=sync`**, **`DB_CONNECTION=sqlite`** — они перекрывают значения из `.env` при работе в контейнере.
 - **Порты:** с хоста приложение доступно на **http://localhost:8080** (`8080:8000`).
+- **Данные:** тома для **`database/`** и **`storage/`**; при старте **`docker/entrypoint.sh`** при отсутствии `.env` копирует `.env.example`, ключ и миграции; секреты VK — в **`.env`** на хосте, при необходимости смонтировать только для чтения.
 
 ## Переменные окружения (backend)
 
