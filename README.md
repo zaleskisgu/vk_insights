@@ -9,7 +9,12 @@
 
 ## VK Insights (этот репозиторий)
 
-Мини-приложение по [ТЗ](./docs/tz.md): Laravel + Vue (Vite), форма на главной, запрос отчёта **`GET /report`** с параметрами `group`, `from`, `to`; **`POST /report/posts`** и **`POST /report/export`** — с CSRF из браузера. После анализа открывается **дашборд** (графики + KPI и таблица **«Все посты»**); агрегаты дашборда и список постов — из **мок-фикстур** в [`app/Integration/Vk/Mock/`](./app/Integration/Vk/Mock/); для полей сообщества в `meta` используется контракт **`VkClient`** (в приложении по умолчанию — [`MockVkClient`](./app/Integration/Vk/MockVkClient.php)). Живой клиент к API — [`HttpVkClient`](./app/Integration/Vk/HttpVkClient.php) (юнит- и опционально интеграционный тест при **`VK_SERVICE_TOKEN`**). Подробности: [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md).
+Мини-приложение по [ТЗ](./docs/tz.md): Laravel + Vue (Vite), форма на главной, запрос отчёта **`GET /report`** с параметрами `group`, `from`, `to`; **`POST /report/posts`** и **`POST /report/export`** — с CSRF из браузера. После анализа открывается **дашборд** (графики + KPI и таблица **«Все посты»**).
+
+- **`VK_USE_MOCK=true`** (по умолчанию в `.env.example`): агрегаты и посты из **мок-фикстур** [`app/Integration/Vk/Mock/`](./app/Integration/Vk/Mock/), [`MockVkClient`](./app/Integration/Vk/MockVkClient.php).
+- **`VK_USE_MOCK=false`** + **`VK_SERVICE_TOKEN`**: реальные **`groups.getById`** и **`wall.get`** ([`HttpVkClient`](./app/Integration/Vk/HttpVkClient.php)), дашборд из [`LiveDashboardFixtureProvider`](./app/Integration/Vk/Support/LiveDashboardFixtureProvider.php); повторные запросы с тем же сообществом и периодом кэшируются ([`WallPostsForPeriodCache`](./app/Integration/Vk/Support/WallPostsForPeriodCache.php), TTL **`VK_CACHE_TTL`**, store из **`CACHE_STORE`**, для продакшена обычно **`redis`**).
+
+Сервисный эндпоинт **`GET /health`** — JSON `status`, `vk_mode` (`mock` \| `live`), `time`. Подробности: [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md).
 
 - **Документация по коду:** [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md), план: [docs/ROADMAP.md](./docs/ROADMAP.md), оптимизации и замеры сборки: [docs/PERF.md](./docs/PERF.md).
 - **Заголовок вкладки и фавикон:** по умолчанию в [`resources/views/app.blade.php`](./resources/views/app.blade.php); после открытия отчёта заголовок меняется в Vue ([`resources/js/App.vue`](./resources/js/App.vue)) — подробности в IMPLEMENTATION, раздел «Фронтенд».
@@ -33,7 +38,10 @@
 
 На Windows при ошибке `php artisan serve` на портах можно раздавать приложение через **`php -S 127.0.0.1:8090 -t public`** из корня проекта или через OSPanel.
 
-Переменные VK в `.env` (см. `.env.example`): **`VK_USE_MOCK`** (`true` — [`MockVkClient`](./app/Integration/Vk/MockVkClient.php), `false` — живой [`HttpVkClient`](./app/Integration/Vk/HttpVkClient.php) с **`VK_SERVICE_TOKEN`**), **`VK_API_VERSION`**, опционально **`VK_INTEGRATION_TEST_GROUP_ID`** для интеграционного теста.
+Переменные в `.env` (см. `.env.example`):
+
+- **VK:** **`VK_USE_MOCK`**, **`VK_SERVICE_TOKEN`** (обязателен при `false`), **`VK_API_VERSION`**, опционально **`VK_INTEGRATION_TEST_GROUP_ID`** (интеграционный тест).
+- **Кэш стены:** **`VK_CACHE_TTL`** — секунды (0 = без кэша; по умолчанию 1200). Драйвер — **`CACHE_STORE`** (для Redis: `redis` + **`REDIS_*`**).
 
 ---
 

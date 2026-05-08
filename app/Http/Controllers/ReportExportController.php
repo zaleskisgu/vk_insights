@@ -2,22 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ReportExportRequest;
 use App\Services\Export\ReportCsvExporter;
 use App\Services\ReportService;
-use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportExportController extends Controller
 {
-    public function store(Request $request, ReportService $reportService, ReportCsvExporter $csvExporter): Response
+    public function store(ReportExportRequest $request, ReportService $reportService, ReportCsvExporter $csvExporter): Response
     {
-        $validated = $request->validate([
-            'group' => ['required', 'string', 'max:512'],
-            'from' => ['required', 'date'],
-            'to' => ['required', 'date', 'after_or_equal:from'],
-            'format' => ['required', Rule::in(['json', 'csv'])],
-        ]);
+        $validated = $request->validated();
 
         $payload = $reportService->getExportData(
             $validated['group'],
@@ -33,20 +28,38 @@ class ReportExportController extends Controller
         );
 
         if ($validated['format'] === 'json') {
-            $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-
-            return response($json, 200, [
-                'Content-Type' => 'application/json; charset=UTF-8',
-                'Content-Disposition' => 'attachment; filename="'.$base.'.json"',
-            ]);
+            return new StreamedResponse(
+                static function () use ($payload): void {
+                    $fh = fopen('php://output', 'wb');
+                    if ($fh === false) {
+                        return;
+                    }
+                    fwrite($fh, json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+                    fclose($fh);
+                },
+                200,
+                [
+                    'Content-Type' => 'application/json; charset=UTF-8',
+                    'Content-Disposition' => 'attachment; filename="'.$base.'.json"',
+                ],
+            );
         }
 
-        $csv = $csvExporter->build($payload);
-
-        return response($csv, 200, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="'.$base.'.csv"',
-        ]);
+        return new StreamedResponse(
+            static function () use ($csvExporter, $payload): void {
+                $fh = fopen('php://output', 'wb');
+                if ($fh === false) {
+                    return;
+                }
+                $csvExporter->streamTo($fh, $payload);
+                fclose($fh);
+            },
+            200,
+            [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="'.$base.'.csv"',
+            ],
+        );
     }
 
     private function exportBasename(string $screenName, string $from, string $to): string

@@ -19,30 +19,23 @@
 - Клиент отчёта на фронте разнесён по [`resources/js/api/report/`](../resources/js/api/report/) с barrel [`index.js`](../resources/js/api/report/index.js); совместимость — реэкспорт в [`reportFetch.js`](../resources/js/api/reportFetch.js); HTTP-слой — [`reportHttp.js`](../resources/js/api/report/reportHttp.js) (`reportJsonGet`, `reportJsonPost`, `fetchReportDashboard`; POST с CSRF для `/report/posts` и `/report/export`).
 - Стартовый экран: [`fetchReportDashboard`](../resources/js/api/report/reportHttp.js) (`GET /report`) в [`StartScreen.vue`](../resources/js/screens/StartScreen.vue).
 - Автотесты фронта (**Vitest** + jsdom): **`npm run test`** — слой [`resources/js/api/report/`](../resources/js/api/report/) (ошибки, HTTP, экспорт); подробности в [IMPLEMENTATION.md](./IMPLEMENTATION.md), раздел «Инструменты (JavaScript)».
+- **Живой VK в продукте:** при **`VK_USE_MOCK=false`** — [`WallPostsForReportLoader`](../app/Services/Vk/WallPostsForReportLoader.php) (`groups.getById` + `wall.get`, фильтр по периоду), [`LiveDashboardFixtureProvider`](../app/Integration/Vk/Support/LiveDashboardFixtureProvider.php), ошибки/429 — [`HttpVkClient`](../app/Integration/Vk/HttpVkClient.php) + исключения в [`app/Integration/Vk/Exception/`](../app/Integration/Vk/Exception/).
+- **Кэш выборки стены:** [`WallPostsForPeriodCache`](../app/Integration/Vk/Support/WallPostsForPeriodCache.php), TTL **`VK_CACHE_TTL`**, store **`CACHE_STORE`**, блокировка от параллельного пересчёта.
+- **Парсинг ввода:** единый [`VkGroupInputParser`](../app/Integration/Vk/Support/VkGroupInputParser.php) (ссылки, `@slug`, числа; для чисто числового ввода `-123` берётся модуль ID).
+- **`GET /health`:** JSON `status`, `vk_mode`, `time` ([`routes/web.php`](../routes/web.php)).
+- **Наблюдаемость VK:** [`VkApiCallStats`](../app/Integration/Vk/VkApiCallStats.php), middleware [`LogVkApiCallStats`](../app/Http/Middleware/LogVkApiCallStats.php), канал лога **`vk`**, заголовки **`X-Vk-Calls`** / **`X-Vk-Total-Ms`** в `local`.
 
 ## Приоритет 1 (ядро сдачи)
 
-1. **Живой VK в продукте** (базовый транспорт уже есть в [`HttpVkClient`](../app/Integration/Vk/HttpVkClient.php))
-   - Пагинация `wall.get` до конца выборки или границы периода; фильтр постов по `from` / `to` на стороне отчёта.
-   - Ошибки VK (`error` в JSON), 429 / сеть / таймауты — понятные ответы API; при 429 — retry/backoff по политике.
-   - В `AppServiceProvider`: **`MockVkClient` | `HttpVkClient`** от `config('vk.use_mock')` и проверка токена при `use_mock = false`; в `ReportService` — реальный `group_id` из ввода / `groups.getById`, а не только мок.
-
-2. **Данные отчёта из VK**
-   - Заменить или дополнить `MockDashboardData`: агрегаты из **реальной** стены (топ, среднее, типы, динамика по дням), парсинг сообщества → `owner_id`.
-
-3. **Кэш** (10–30 мин)
-   - Ключ по группе и периоду; драйвер по выбору; TTL из конфига; промах → VK → расчёт → запись.
-
-4. **REST и ТЗ**
-   - Отчёт уже отдаётся **`GET /report?group=&from=&to=`** (query вместо `groupId` в path); при желании привести к **`POST /analyze`** + отдельный **`GET /report/{id}`** из ТЗ **или** оставить текущий контракт и держать его в README/IMPLEMENTATION.
-   - **`GET /health`**: алиас или отдельный маршрут рядом с `GET /up`.
-
-5. **Наблюдаемость**
-   - Лог: время обработки, число HTTP-вызовов к `api.vk.com`.
+1. ~~Живой VK, пагинация стены, отчёт из реальных постов~~ — сделано (см. выше). Доработки по желанию: более агрессивный backoff, метрики вне лога.
+2. ~~Кэш 10–30 мин~~ — сделано (`VK_CACHE_TTL`, Redis/иной драйвер).
+3. ~~`GET /health`~~ — сделано.
+4. ~~Логирование числа/времени вызовов VK~~ — сделано (`LogVkApiCallStats`).
+5. **REST и ТЗ (опционально):** привести к **`POST /analyze`** + **`GET /report/{id}`** из ТЗ или зафиксировать текущий **`GET /report?…`** как контракт (уже описано в README/IMPLEMENTATION).
 
 ## Приоритет 2 (интеграция и продукт)
 
-6. Стабильная JSON-схема для **реального** отчёта (согласовать с уже используемым фронтом и полем экспорта **`all_posts`** при необходимости).
+6. Стабильная JSON-схема и версионирование ответа **`GET /report`** при эволюции полей; при необходимости — явная схема для **`all_posts`** в экспорте.
 
 ## Приоритет 3 (UX и оптимизация)
 

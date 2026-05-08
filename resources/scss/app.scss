@@ -416,6 +416,17 @@ html.dark .p-datepicker-panel:not(.p-datepicker-panel-inline) {
     color: #a3a3a3;
 }
 
+.vk-dashboard-truncated {
+    margin: 1rem 0 0;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(232, 168, 56, 0.35);
+    background: rgba(232, 168, 56, 0.08);
+    color: #e8a838;
+    font-size: 0.875rem;
+    line-height: 1.45;
+}
+
 .vk-dashboard-loading {
     max-width: $max-dashboard;
     margin: 0 auto;

@@ -23,6 +23,14 @@ function fillPreset(screenName) {
     errorMessage.value = '';
 }
 
+function toYmd(d) {
+    if (!(d instanceof Date) || Number.isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
 async function analyze() {
     errorMessage.value = '';
     const group = community.value.trim();
@@ -43,8 +51,8 @@ async function analyze() {
     try {
         const data = await fetchReportDashboard({
             group,
-            from: dateFrom.value?.toISOString() ?? '',
-            to: dateTo.value?.toISOString() ?? '',
+            from: toYmd(dateFrom.value),
+            to: toYmd(dateTo.value),
         });
         emit('report', data);
     } catch (e) {

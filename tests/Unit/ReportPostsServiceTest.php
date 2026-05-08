@@ -3,10 +3,11 @@
 namespace Tests\Unit;
 
 use App\Integration\Vk\MockVkClient;
+use App\Services\Dashboard\DashboardFixtureFactory;
 use App\Services\Posts\ReportPostsService;
 use App\Services\Vk\WallPostsForReportLoader;
 use Carbon\Carbon;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class ReportPostsServiceTest extends TestCase
 {
@@ -15,8 +16,10 @@ class ReportPostsServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $loader = new WallPostsForReportLoader(new MockVkClient);
-        $this->service = new ReportPostsService($loader, false);
+        config()->set('vk.use_mock', true);
+        $vk = new MockVkClient;
+        $factory = new DashboardFixtureFactory($vk, new WallPostsForReportLoader($vk));
+        $this->service = new ReportPostsService($factory);
     }
 
     public function test_list_page_meta_totals_and_pagination(): void

@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Integration\Vk\Exception\VkApiException;
 use App\Integration\Vk\HttpVkClient;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -58,7 +59,7 @@ class HttpVkClientTest extends TestCase
 
         $client = new HttpVkClient('bad', '5.199');
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(VkApiException::class);
         $this->expectExceptionMessage('VK API groups.getById [5]: User authorization failed');
         $client->getGroupById(1);
     }

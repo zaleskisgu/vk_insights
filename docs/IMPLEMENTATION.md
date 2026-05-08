@@ -11,10 +11,10 @@
 
 | Метод и путь | Назначение | Отличие от [tz.md](./tz.md) |
 |--------------|------------|-----------------------------|
-| `GET /report?group=&from=&to=` | JSON дашборда: `meta` (в т.ч. **`generated_at`** — момент сборки ответа), `summary`, `daily`, `top_posts`, `content_types` (мок-данные + аватар из мока VK). Параметры запроса: **`group`**, **`from`**, **`to`** (даты). | В ТЗ — `POST /analyze` и путь с `groupId`; здесь один **`GET`** с query, без CSRF-тела. |
-| `POST /report/export` | Скачивание отчёта: тело `group`, `from`, `to`, **`format`**: `json` \| `csv`. Ответ — файл (`application/json` или `text/csv; charset=UTF-8`, `Content-Disposition: attachment`). JSON = дашборд + **`all_posts`** (полный мок-список); CSV — блоки meta, summary, daily, top_posts, content_types, all_posts ([`ReportCsvExporter`](../app/Services/Export/ReportCsvExporter.php)). | В ТЗ — «экспорт отчёта»; формат запроса свой. |
-| `POST /report/posts` | Постраничный список постов за период (мок): тело `group`, `from`, `to`, опционально `page`, `per_page`, `sort`, `order`, `q`, `type`; ответ `{ data, meta }` с `meta.total`, `meta.filtered`, пагинацией | В ТЗ отдельного эндпоинта нет; данные из того же мока, что и дашборд. |
-| `GET /up` | Health Laravel | В ТЗ указан `GET /health`. |
+| `GET /health` | JSON: **`status`** (`ok`), **`vk_mode`** (`mock` \| `live` по `config('vk.use_mock')`), **`time`** (ISO 8601). | Соответствует ТЗ. |
+| `GET /report?group=&from=&to=` | JSON дашборда: `meta` (в т.ч. **`generated_at`**), `summary`, `daily`, `top_posts`, `content_types`. Источник данных: **мок** или **живая стена VK** (см. ниже). Параметры: **`group`**, **`from`**, **`to`**. | В ТЗ — `POST /analyze` и путь с `groupId`; здесь **`GET`** с query. |
+| `POST /report/export` | Тело `group`, `from`, `to`, **`format`**: `json` \| `csv`. JSON/CSV = дашборд + **`all_posts`**. | Формат запроса свой. |
+| `POST /report/posts` | Постраничный список постов: те же `group`/`from`/`to`, опционально `page`, `per_page`, `sort`, `order`, `q`, `type`; ответ `{ data, meta }`. Данные из того же снимка, что и отчёт (мок или кэшированная выборка стены). | В ТЗ отдельного эндпоинта нет. |
 
 ## Доступ к `GET /report`, `POST /report/export` и `POST /report/posts`
 
@@ -24,22 +24,23 @@
 
 ## Слой VK и моки
 
-- Контракт [`App\Contracts\VkClient`](../app/Contracts/VkClient.php): `getGroupById(int)`, `getWall(int $ownerId, int $count, int $offset)`.
-- Папка **[`app/Integration/Vk/Mock/`](../app/Integration/Vk/Mock/)** — тестовые ответы «как VK API» и генерация дашборда:
-  - [`MockGroupsGetByIdResponse`](../app/Integration/Vk/Mock/MockGroupsGetByIdResponse.php) — тело `groups.getById` (аватар `photo_*` → локальный [`public/media/vk/group-photo.svg`](../public/media/vk/group-photo.svg)).
-  - [`MockWallGetItems`](../app/Integration/Vk/Mock/MockWallGetItems.php) — элементы `wall.get`.
-  - [`MockDashboardData`](../app/Integration/Vk/Mock/MockDashboardData.php) — агрегаты по периоду (суточные ряды, summary, топ-10, типы контента) и полный список постов для «Все посты».
-  - [`MockDashboardFixtureProvider`](../app/Integration/Vk/Mock/MockDashboardFixtureProvider.php) — реализация [`DashboardFixtureProvider`](../app/Contracts/DashboardFixtureProvider.php): один расчёт периода для [`Summary` / `Daily` / `TopPosts` / `ContentTypes`](../app/Services/Dashboard/) dashboard-сервисов и для экспорта/постраничного списка.
-- [`MockVkClient`](../app/Integration/Vk/MockVkClient.php): без сети, проксирует в классы из `Mock/`.
-- [`HttpVkClient`](../app/Integration/Vk/HttpVkClient.php): живой VK — **POST** `https://api.vk.com/method/{method}` (form), разбор `response` / `error`; внутри — [`GroupsGetByIdMethod`](../app/Integration/Vk/Method/GroupsGetByIdMethod.php), [`WallGetMethod`](../app/Integration/Vk/Method/WallGetMethod.php); ответы приводятся к массивам через DTO в **[`app/Data/Vk/`](../app/Data/Vk/)** (в т.ч. разбор объекта `response` с `groups` / `profiles` у `groups.getById`).
-- [`AppServiceProvider`](../app/Providers/AppServiceProvider.php): **`VkClient`** — при `config('vk.use_mock')` **`MockVkClient`**, иначе **`HttpVkClient`** с `access_token` и `version` из [`config/vk.php`](../config/vk.php) (env: **`VK_USE_MOCK`**, **`VK_SERVICE_TOKEN`**, **`VK_API_VERSION`**). Пустой токен при живом клиенте даст ошибку при первом вызове API (см. `HttpVkClient`).
+- Контракт [`App\Contracts\VkClient`](../app/Contracts/VkClient.php): `getGroupById(int|string)`, `getWall(int $ownerId, int $count, int $offset)`.
+- **Разбор ввода сообщества** (одна логика для API и для подсказок `meta`): [`VkGroupInputParser`](../app/Integration/Vk/Support/VkGroupInputParser.php) → [`VkGroupInputParseResult`](../app/Integration/Vk/Support/VkGroupInputParseResult.php): **`query`** (аргумент `group_ids`), **`displayHint`** (имя, если VK не вернул `name`), **`screenSlug`** (нижний регистр для `screen_name` в фолбэке). Используется в [`ReportService`](../app/Services/ReportService.php) и [`WallPostsForReportLoader`](../app/Services/Vk/WallPostsForReportLoader.php).
+- Папка **[`app/Integration/Vk/Mock/`](../app/Integration/Vk/Mock/)** — ответы «как VK API» и генерация дашборда без сети:
+  - [`MockGroupsGetByIdResponse`](../app/Integration/Vk/Mock/MockGroupsGetByIdResponse.php), [`MockWallGetItems`](../app/Integration/Vk/Mock/MockWallGetItems.php), [`MockDashboardData`](../app/Integration/Vk/Mock/MockDashboardData.php), [`MockDashboardFixtureProvider`](../app/Integration/Vk/Mock/MockDashboardFixtureProvider.php).
+- [`MockVkClient`](../app/Integration/Vk/MockVkClient.php): реализация **`VkClient`** без HTTP.
+- [`HttpVkClient`](../app/Integration/Vk/HttpVkClient.php): **POST** `https://api.vk.com/method/{method}`; [`GroupsGetByIdMethod`](../app/Integration/Vk/Method/GroupsGetByIdMethod.php), [`WallGetMethod`](../app/Integration/Vk/Method/WallGetMethod.php); DTO в **[`app/Data/Vk/`](../app/Data/Vk/)**; опционально [`VkApiCallStats`](../app/Integration/Vk/VkApiCallStats.php) (длительность и количество вызовов за запрос). Ошибки VK / HTTP / сеть мапятся в типизированные исключения [`app/Integration/Vk/Exception/`](../app/Integration/Vk/Exception/) (JSON-ответы для `expectsJson()` настраиваются в [`bootstrap/app.php`](../bootstrap/app.php)).
+- **Живой отчёт:** [`WallPostsForReportLoader`](../app/Services/Vk/WallPostsForReportLoader.php) — `groups.getById` + постраничный `wall.get` (до 50 страниц по 100), фильтр постов по периоду. При **`VK_USE_MOCK=false`**, **`VK_CACHE_TTL` > 0** и настроенном store результат **`group` + нормализованные посты** кэшируется [`WallPostsForPeriodCache`](../app/Integration/Vk/Support/WallPostsForPeriodCache.php) с ключом вида `vk:wall:{owner_key}:{from}:{to}` и блокировкой от stampede (`Cache::lock`). Драйвер — **`CACHE_STORE`** ([`config/cache.php`](../config/cache.php)), TTL — [`config/vk.php`](../config/vk.php) (`VK_CACHE_TTL`, по умолчанию 1200 с).
+- **Дашборд из живой стены:** [`LiveDashboardFixtureProvider`](../app/Integration/Vk/Support/LiveDashboardFixtureProvider.php) поверх списка постов из лоадера.
+- [`AppServiceProvider`](../app/Providers/AppServiceProvider.php): **`VkClient`** — `MockVkClient` или `HttpVkClient` (+ stats); **`ReportService`** / **`ReportPostsService`** получают флаг «данные со стены» как `!config('vk.use_mock')`.
+- **Наблюдаемость VK:** middleware [`LogVkApiCallStats`](../app/Http/Middleware/LogVkApiCallStats.php) (глобально в `bootstrap/app.php`) пишет в канал **`vk`** ([`config/logging.php`](../config/logging.php)); в **`local`** добавляет заголовки **`X-Vk-Calls`**, **`X-Vk-Total-Ms`** к ответу, если были вызовы API.
 
 ## Контроллер и отчёт
 
-- [`ReportController`](../app/Http/Controllers/ReportController.php): валидирует `group`, `from`, `to` (`from`/`to` — даты, `to` не раньше `from`), передаёт в сервис.
-- [`ReportService`](../app/Services/ReportService.php) (`getReportData` / `getExportData`): парсит ввод сообщества (ссылка `vk.com/...`, `@slug`, строка); **`meta`**: имя, `screen_name`, **`group_query`**, **`owner_id`**, `members_count`, период `from`/`to`, `photo_200` из ответа **`VkClient::getGroupById`**, **`generated_at`** — время генерации (`d.m.Y, H:i:s`, часовой пояс `config('app.timezone')`); блоки дашборда собирают четыре сервиса в [`app/Services/Dashboard/`](../app/Services/Dashboard/) по **`MockDashboardFixtureProvider`** (агрегаты **не** из реальной стены, а из мок-генератора по датам).
-- [`ReportPostsController`](../app/Http/Controllers/ReportPostsController.php) + [`ReportPostsService::listPage`](../app/Services/Posts/ReportPostsService.php): фильтр по типу контента и подстроке **`q`**, сортировка и пагинация по тому же мок-списку, что и у фикстуры отчёта.
-- [`ReportExportController`](../app/Http/Controllers/ReportExportController.php): валидация `group`, `from`, `to`, `format`; данные из **`ReportService::getExportData()`** (дашборд + **`all_posts`** через провайдер фикстур).
+- [`ReportController`](../app/Http/Controllers/ReportController.php): валидирует `group`, `from`, `to`, передаёт в сервис.
+- [`ReportService`](../app/Services/ReportService.php) (`getReportData` / `getExportData`): **`VkGroupInputParser`** для подсказок имени/screen; при **моке** — `MockDashboardFixtureProvider` + `getGroupById` из мок-клиента; при **live** — `WallPostsForReportLoader` + `LiveDashboardFixtureProvider`. **`meta`**: `name` / `screen_name` из VK с фолбэком на парсер; **`group_query`** — исходная строка; **`owner_id`**, `members_count`, `photo_200`, **`generated_at`**.
+- [`ReportPostsController`](../app/Http/Controllers/ReportPostsController.php) + [`ReportPostsService::listPage`](../app/Services/Posts/ReportPostsService.php): тот же источник постов, что и отчёт (мок или лоадер с кэшем); фильтры, сортировка, пагинация в PHP.
+- [`ReportExportController`](../app/Http/Controllers/ReportExportController.php): **`ReportService::getExportData()`** — дашборд + **`all_posts`**.
 
 Структурированные модели ответа (мета отчёта, строки таблиц и т.д.) — в **[`app/Data/`](../app/Data/)** (`ReportMetaData`, элементы постов и др.) с методами `toArray()` там, где нужно для JSON/экспорта.
 
@@ -77,15 +78,12 @@
 
 Общие цвета/легенда/tooltip/палитра столбчатого топа для Chart.js — [`chartTheme.js`](../resources/js/utils/chartTheme.js) (`chartColors`, `chartTooltipPluginOptions`, …). Классы в [`app.scss`](../resources/scss/app.scss): `vk-chart-wrap--tall`, `vk-chart-wrap--compact`; у столбчатого топа — плагины подсветки бара и полосы, **встроенный** tooltip Chart.js с расширенными `callbacks` (дата, пост, лайки/комменты/репосты, engagement). Блок **«Все посты»** — префикс **`.vk-all-posts__*`** (тёмная карточка, шапка, поиск, селект типа, ячейки DataTable, пагинатор).
 
-## Что из ТЗ пока не сделано
+## Отличия от формулировок ТЗ
 
-- Использование **`HttpVkClient` в HTTP-отчёте** (подстановка реального id группы из ввода, полная выборка стены за период, пагинация `wall.get`, фильтр по датам, политика 429 / retry).
-- Связка агрегатов дашборда с **реальными** данными стены (сейчас только мок через `MockDashboardFixtureProvider` / `MockDashboardData`).
-- Кэш 10–30 мин, логирование времени и числа запросов к VK.
+- Отчёт отдаётся **`GET /report?…`**, а не `POST /analyze` + `GET /report/:id`.
+- Пути **`POST /report/posts`** и **`POST /report/export`** — расширение под UI (таблица «Все посты» и скачивание).
 
-При этом **клиент к API** (`HttpVkClient` + методы + DTO) уже есть; проверка — юнит-тест [`HttpVkClientTest`](../tests/Unit/HttpVkClientTest.php) и при наличии токена — интеграционный [`VkHttpClientIntegrationTest`](../tests/Integration/VkHttpClientIntegrationTest.php) (сеть, `VK_SERVICE_TOKEN`; опционально `VK_INTEGRATION_TEST_GROUP_ID`).
-
-См. также описание оптимизаций и замеров сборки: [`PERF.md`](./PERF.md).
+Проверка клиента VK: [`HttpVkClientTest`](../tests/Unit/HttpVkClientTest.php), при **`VK_SERVICE_TOKEN`** — [`VkHttpClientIntegrationTest`](../tests/Integration/VkHttpClientIntegrationTest.php). Оптимизации фронта и сборки: [`PERF.md`](./PERF.md).
 
 ## Инструменты (PHP)
 
@@ -107,6 +105,8 @@
 
 ## Переменные окружения (backend)
 
-- **`VK_SERVICE_TOKEN`**, **`VK_API_VERSION`**, **`VK_USE_MOCK`**, **`VK_INTEGRATION_TEST_GROUP_ID`** — см. [`config/vk.php`](../config/vk.php) и [`.env.example`](../.env.example). При **`VK_USE_MOCK=false`** нужен непустой **`VK_SERVICE_TOKEN`**; иначе контейнер отдаст `HttpVkClient`, но вызовы API упадут с сообщением о пустом токене.
+- **VK:** **`VK_SERVICE_TOKEN`**, **`VK_API_VERSION`**, **`VK_USE_MOCK`**, **`VK_INTEGRATION_TEST_GROUP_ID`**, **`VK_CACHE_TTL`** — [`config/vk.php`](../config/vk.php), [`.env.example`](../.env.example).
+- **Кэш:** **`CACHE_STORE`** (например `redis` или `database`), **`REDIS_*`** при Redis.
+- При **`VK_USE_MOCK=false`** нужен непустой **`VK_SERVICE_TOKEN`**.
 
-Итого: **форма → `GET /report?…` → мок-дашборд + `VkClient` (мок) для полей группы в `meta`**; таблица **«Все посты»** — **`POST /report/posts`**; экспорт — **`POST /report/export`** (JSON/CSV, мок); связка отчёта с живым VK, кэш, REST как в ТЗ и **PERF.md** — см. [ROADMAP.md](./ROADMAP.md).
+Итого: **форма → `GET /report?…` → дашборд (мок или live VK)**; **«Все посты»** — **`POST /report/posts`**; экспорт — **`POST /report/export`**; **health** — **`GET /health`**. План развития: [ROADMAP.md](./ROADMAP.md).

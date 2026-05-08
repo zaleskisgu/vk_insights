@@ -24,6 +24,23 @@ final class ReportCsvExporter
             return '';
         }
 
+        $this->streamTo($fh, $data);
+
+        rewind($fh);
+        $out = stream_get_contents($fh) ?: '';
+        fclose($fh);
+
+        return $out;
+    }
+
+    /**
+     * Пишет CSV напрямую в открытый поток (для {@see \Symfony\Component\HttpFoundation\StreamedResponse}).
+     *
+     * @param  resource  $fh
+     * @param  array<string, mixed>  $data
+     */
+    public function streamTo($fh, array $data): void
+    {
         fwrite($fh, "\xEF\xBB\xBF");
         $meta = $data['meta'] ?? [];
         $summary = $data['summary'] ?? [];
@@ -133,12 +150,6 @@ final class ReportCsvExporter
                 (string) ($row['text'] ?? ''),
             ]);
         }
-
-        rewind($fh);
-        $out = stream_get_contents($fh) ?: '';
-        fclose($fh);
-
-        return $out;
     }
 
     /** @param resource $fh */

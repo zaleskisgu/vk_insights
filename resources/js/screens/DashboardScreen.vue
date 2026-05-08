@@ -24,6 +24,17 @@ const contentTypes = computed(() => props.report.content_types ?? []);
 const isDashboardChartsEmpty = computed(
     () => daily.value.length === 0 && topPosts.value.length === 0,
 );
+
+const truncatedNotice = computed(() => {
+    if (!meta.value.truncated) {
+        return '';
+    }
+    const limit = Number(meta.value.posts_limit) || 0;
+    const limitLabel = limit > 0 ? limit.toLocaleString('ru-RU') : '';
+    return limitLabel
+        ? `За выбранный период постов больше, чем мы можем загрузить за один запрос. Показаны последние ${limitLabel} постов — для полного отчёта сузьте период.`
+        : 'За выбранный период постов больше, чем мы можем загрузить за один запрос. Показаны последние посты — для полного отчёта сузьте период.';
+});
 </script>
 
 <template>
@@ -33,6 +44,14 @@ const isDashboardChartsEmpty = computed(
         </h1>
         <DashboardProfileCard :report="report" />
         <DashboardKpiCards :summary="summary" />
+        <p
+            v-if="truncatedNotice"
+            class="vk-dashboard-truncated"
+            role="status"
+            aria-live="polite"
+        >
+            {{ truncatedNotice }}
+        </p>
         <template v-if="!isDashboardChartsEmpty">
             <DashboardDailyLineChart :daily="daily" />
             <div class="vk-dashboard__row2">

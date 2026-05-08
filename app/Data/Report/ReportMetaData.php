@@ -14,6 +14,8 @@ readonly class ReportMetaData
         public string $to,
         public ?string $photo_200,
         public string $generated_at,
+        public bool $truncated = false,
+        public ?int $posts_limit = null,
     ) {}
 
     /**
@@ -31,6 +33,8 @@ readonly class ReportMetaData
             'to' => $this->to,
             'photo_200' => $this->photo_200,
             'generated_at' => $this->generated_at,
+            'truncated' => $this->truncated,
+            'posts_limit' => $this->posts_limit,
         ];
     }
 }

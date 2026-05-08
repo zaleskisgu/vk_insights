@@ -26,8 +26,9 @@ final class VkWallPostNormalizer
         }
 
         $ts = (int) ($item['date'] ?? 0);
+        $tz = (string) config('vk.timezone', config('app.timezone', 'UTC'));
         $date = $ts > 0
-            ? Carbon::createFromTimestamp($ts)->timezone(config('app.timezone'))->format('Y-m-d')
+            ? Carbon::createFromTimestamp($ts)->timezone($tz)->format('Y-m-d')
             : '';
 
         return new PostListItemData(

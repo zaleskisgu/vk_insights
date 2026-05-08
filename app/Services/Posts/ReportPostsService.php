@@ -3,16 +3,14 @@
 namespace App\Services\Posts;
 
 use App\Data\Post\PostListItemData;
-use App\Integration\Vk\Mock\MockDashboardFixtureProvider;
-use App\Services\Vk\WallPostsForReportLoader;
+use App\Services\Dashboard\DashboardFixtureFactory;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 
 final class ReportPostsService
 {
     public function __construct(
-        private WallPostsForReportLoader $wallPostsLoader,
-        private bool $dashboardFromVkWall,
+        private DashboardFixtureFactory $fixtureFactory,
     ) {}
 
     /**
@@ -32,19 +30,11 @@ final class ReportPostsService
         $fromC = Carbon::instance($from)->startOfDay();
         $toC = Carbon::instance($to)->startOfDay();
 
-        if ($this->dashboardFromVkWall) {
-            $loaded = $this->wallPostsLoader->loadGroupAndPostsInPeriod($group, $fromC, $toC);
-            $all = array_map(
-                static fn (PostListItemData $p): array => $p->toArray(),
-                $loaded['posts'],
-            );
-        } else {
-            $fixture = new MockDashboardFixtureProvider($fromC, $toC);
-            $all = array_map(
-                static fn (PostListItemData $p): array => $p->toArray(),
-                $fixture->allPostItems($group),
-            );
-        }
+        $bundle = $this->fixtureFactory->create($group, $fromC, $toC);
+        $all = array_map(
+            static fn (PostListItemData $p): array => $p->toArray(),
+            $bundle->provider->allPostItems($group),
+        );
 
         $total = count($all);
 
