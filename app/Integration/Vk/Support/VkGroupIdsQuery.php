@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Integration\Vk;
+namespace App\Integration\Vk\Support;
 
 /**
  * Строка для параметра {@code group_ids} в {@see groups.getById}: id или короткое имя.

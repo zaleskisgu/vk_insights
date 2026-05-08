@@ -6,7 +6,7 @@ use App\Contracts\DashboardFixtureProvider;
 use App\Contracts\VkClient;
 use App\Data\Post\PostListItemData;
 use App\Data\Report\ReportMetaData;
-use App\Integration\Vk\LiveDashboardFixtureProvider;
+use App\Integration\Vk\Support\LiveDashboardFixtureProvider;
 use App\Integration\Vk\Mock\MockDashboardFixtureProvider;
 use App\Services\Dashboard\ContentTypesDashboardService;
 use App\Services\Dashboard\DailyDashboardService;

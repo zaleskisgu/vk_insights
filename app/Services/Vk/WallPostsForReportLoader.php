@@ -4,7 +4,7 @@ namespace App\Services\Vk;
 
 use App\Contracts\VkClient;
 use App\Data\Post\PostListItemData;
-use App\Integration\Vk\VkGroupIdsQuery;
+use App\Integration\Vk\Support\VkGroupIdsQuery;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 

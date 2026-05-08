@@ -10,6 +10,28 @@ import {
     chartTickColor,
 } from '@/utils/chartTheme.js';
 
+/**
+ * Верхняя граница оси: не ниже реальных данных (с запасом factor), округление 1–2–5×10ⁿ.
+ */
+function niceAxisMax(value, factor = 1.12) {
+    const v = Math.max(0, Number(value) || 0);
+    if (v === 0) {
+        return 1;
+    }
+    const target = v * factor;
+    const exp = Math.floor(Math.log10(target));
+    const frac = target / 10 ** exp;
+    let niceFrac = 10;
+    if (frac <= 1) {
+        niceFrac = 1;
+    } else if (frac <= 2) {
+        niceFrac = 2;
+    } else if (frac <= 5) {
+        niceFrac = 5;
+    }
+    return niceFrac * 10 ** exp;
+}
+
 const props = defineProps({
     daily: {
         type: Array,
@@ -50,8 +72,18 @@ const lineChartData = computed(() => {
 });
 
 const lineChartOptions = computed(() => {
-    const dayCount = (props.daily ?? []).length;
+    const daily = props.daily ?? [];
+    const dayCount = daily.length;
     const maxTicks = Math.min(8, Math.max(4, Math.ceil(dayCount / 12)));
+
+    const maxEng = daily.length
+        ? Math.max(...daily.map((row) => Number(row.avg_engagement) || 0))
+        : 0;
+    const maxPost = daily.length
+        ? Math.max(...daily.map((row) => Number(row.posts_count) || 0))
+        : 0;
+    const yMax = niceAxisMax(maxEng, 1.12);
+    const y1Max = niceAxisMax(maxPost, 1.15);
 
     return {
         ...chartResponsive,
@@ -88,10 +120,10 @@ const lineChartOptions = computed(() => {
             y: {
                 position: 'left',
                 min: 0,
-                max: 10_000,
+                max: yMax,
                 ticks: {
                     ...chartTickColor(9),
-                    stepSize: 2_500,
+                    maxTicksLimit: 8,
                     callback: (v) => ruNumber.format(v),
                 },
                 grid: {
@@ -103,10 +135,10 @@ const lineChartOptions = computed(() => {
             y1: {
                 position: 'right',
                 min: 0,
-                max: 36,
+                max: y1Max,
                 ticks: {
                     ...chartTickColor(9),
-                    stepSize: 9,
+                    maxTicksLimit: 8,
                     callback: (v) => ruNumber.format(v),
                 },
                 grid: { drawOnChartArea: false },

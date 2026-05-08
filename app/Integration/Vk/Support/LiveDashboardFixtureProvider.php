@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Integration\Vk;
+namespace App\Integration\Vk\Support;
 
 use App\Contracts\DashboardFixtureProvider;
 use App\Data\Dashboard\ContentTypeRowData;
