@@ -11,6 +11,8 @@
 
 Мини-приложение по [ТЗ](./docs/tz.md): Laravel + Vue (Vite), форма на главной, запрос отчёта **`GET /report`** с параметрами `group`, `from`, `to`; **`POST /report/posts`** и **`POST /report/export`** — с CSRF из браузера. После анализа открывается **дашборд** (графики + KPI и таблица **«Все посты»**).
 
+Параметры **`from`** и **`to`** — календарные даты (удобный формат для клиента: **`YYYY-MM-DD`**). На сервере проверка «не позже сегодня» и максимальная длина периода (**`VK_PERIOD_MAX_DAYS`**, по умолчанию 365 дней) считаются в часовом поясе **`VK_TIMEZONE`** из [`config/vk.php`](./config/vk.php) (по умолчанию `Europe/Moscow`), чтобы «сегодня» совпадало с ожиданиями для постов VK. Три эндпоинта отчёта ограничены **`throttle:30,1`** (30 запросов в минуту с одного IP).
+
 - **`VK_USE_MOCK=true`** (по умолчанию в `.env.example`): агрегаты и посты из **мок-фикстур** [`app/Integration/Vk/Mock/`](./app/Integration/Vk/Mock/), [`MockVkClient`](./app/Integration/Vk/MockVkClient.php).
 - **`VK_USE_MOCK=false`** + **`VK_SERVICE_TOKEN`**: реальные **`groups.getById`** и **`wall.get`** ([`HttpVkClient`](./app/Integration/Vk/HttpVkClient.php)), дашборд из [`LiveDashboardFixtureProvider`](./app/Integration/Vk/Support/LiveDashboardFixtureProvider.php); повторные запросы с тем же сообществом и периодом кэшируются ([`WallPostsForPeriodCache`](./app/Integration/Vk/Support/WallPostsForPeriodCache.php), TTL **`VK_CACHE_TTL`**, store из **`CACHE_STORE`**, для продакшена обычно **`redis`**).
 
@@ -41,6 +43,8 @@
 Переменные в `.env` (см. `.env.example`):
 
 - **VK:** **`VK_USE_MOCK`**, **`VK_SERVICE_TOKEN`** (обязателен при `false`), **`VK_API_VERSION`**, опционально **`VK_INTEGRATION_TEST_GROUP_ID`** (интеграционный тест).
+- **Период и время:** **`VK_TIMEZONE`** (отображение дат постов, `generated_at`, граница «сегодня» при валидации), **`VK_PERIOD_MAX_DAYS`** (максимум дней в диапазоне `from`…`to`).
+- **Стена (live):** **`VK_WALL_MAX_PAGES`**, **`VK_WALL_PAGE_SIZE`** (до 100, см. [`config/vk.php`](./config/vk.php)).
 - **Кэш стены:** **`VK_CACHE_TTL`** — секунды (0 = без кэша; по умолчанию 1200). Драйвер — **`CACHE_STORE`** (для Redis: `redis` + **`REDIS_*`**).
 
 ---

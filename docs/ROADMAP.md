@@ -23,7 +23,12 @@
 - **Кэш выборки стены:** [`WallPostsForPeriodCache`](../app/Integration/Vk/Support/WallPostsForPeriodCache.php), TTL **`VK_CACHE_TTL`**, store **`CACHE_STORE`**, блокировка от параллельного пересчёта.
 - **Парсинг ввода:** единый [`VkGroupInputParser`](../app/Integration/Vk/Support/VkGroupInputParser.php) (ссылки, `@slug`, числа; для чисто числового ввода `-123` берётся модуль ID).
 - **`GET /health`:** JSON `status`, `vk_mode`, `time` ([`routes/web.php`](../routes/web.php)).
-- **Наблюдаемость VK:** [`VkApiCallStats`](../app/Integration/Vk/VkApiCallStats.php), middleware [`LogVkApiCallStats`](../app/Http/Middleware/LogVkApiCallStats.php), канал лога **`vk`**, заголовки **`X-Vk-Calls`** / **`X-Vk-Total-Ms`** в `local`.
+- **Наблюдаемость VK:** [`VkApiCallStats`](../app/Integration/Vk/Support/VkApiCallStats.php), middleware [`LogVkApiCallStats`](../app/Http/Middleware/LogVkApiCallStats.php), канал лога **`vk`**, заголовки **`X-Vk-Calls`** / **`X-Vk-Total-Ms`** в `local`.
+- **Единая сборка дашборда (мок/live):** [`DashboardFixtureFactory`](../app/Services/Dashboard/DashboardFixtureFactory.php), [`DashboardFixtureBundle`](../app/Services/Dashboard/DashboardFixtureBundle.php); общий кэш стены для отчёта и таблицы постов без двойной выборки.
+- **Валидация периода:** [`ReportPeriodRequest`](../app/Http/Requests/ReportPeriodRequest.php) + наследники; «не позже сегодня» и лимит **`VK_PERIOD_MAX_DAYS`** в **`VK_TIMEZONE`**; стартовая форма шлёт **`from`/`to`** как **`YYYY-MM-DD`** ([`StartScreen.vue`](../resources/js/screens/StartScreen.vue)).
+- **Лимиты стены и прозрачность:** **`VK_WALL_*`** в [`config/vk.php`](../config/vk.php); при обрезке — **`meta.truncated`**, **`meta.posts_limit`**, предупреждение на дашборде ([`DashboardScreen.vue`](../resources/js/screens/DashboardScreen.vue)).
+- **Экспорт CSV:** стриминг (**`StreamedResponse`**, [`ReportCsvExporter::streamTo`](../app/Services/Export/ReportCsvExporter.php)).
+- **Защита от злоупотребления:** **`throttle:30,1`** на **`GET /report`**, **`POST /report/export`**, **`POST /report/posts`** ([`routes/web.php`](../routes/web.php)).
 
 ## Приоритет 1 (ядро сдачи)
 
@@ -41,7 +46,7 @@
 
 7. Доработка таблицы «Все посты» при появлении живых данных (экспорт выборки, производительность больших стен); **общие** состояния **loading / empty / error** для всего блока результатов дашборда (сейчас: empty только при пустых `daily` и `top_posts`; loading/error — у формы, таблицы постов и экспорта по отдельности); адаптив по макету ТЗ.
 8. **PERF.md** — [`docs/PERF.md`](./PERF.md) заполнен; при сдаче можно добавить Lighthouse / Web Vitals с цифрами до/после.
-9. **README** — при необходимости расширить: токен VK, мок/прод, демо/GIF (краткое описание API уже есть в блоке «VK Insights»).
+9. **README** — блок «VK Insights», переменные окружения и поведение периода обновлены; опционально — демо/GIF.
 
 ## Критерии из ТЗ (напоминание)
 
