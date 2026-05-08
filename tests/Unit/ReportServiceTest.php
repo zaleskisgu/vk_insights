@@ -32,7 +32,7 @@ class ReportServiceTest extends TestCase
         $vk = $this->createMock(VkClient::class);
         $vk->expects($this->once())
             ->method('getGroupById')
-            ->with(1)
+            ->with('igm')
             ->willReturn($groupVk);
 
         $service = $this->makeService($vk);

@@ -4,6 +4,7 @@ import Button from 'primevue/button';
 import DatePicker from 'primevue/datepicker';
 import InputText from 'primevue/inputtext';
 import { fetchReportDashboard, reportClientErrorMessage } from '@/api/reportFetch.js';
+import { pushReportUrl } from '@/utils/reportUrl.js';
 
 const emit = defineEmits(['report']);
 
@@ -49,11 +50,13 @@ async function analyze() {
 
     loading.value = true;
     try {
-        const data = await fetchReportDashboard({
+        const query = {
             group,
             from: toYmd(dateFrom.value),
             to: toYmd(dateTo.value),
-        });
+        };
+        const data = await fetchReportDashboard(query);
+        pushReportUrl(query);
         emit('report', data);
     } catch (e) {
         errorMessage.value = reportClientErrorMessage(
@@ -87,15 +90,15 @@ async function analyze() {
                 <InputText
                     id="community-input"
                     v-model="community"
-                    placeholder="например: durov, vk, или ссылка vk.com/durov"
+                    placeholder="например: habr, vk, или ссылка vk.com/habr"
                     autocomplete="off"
                     fluid
                     @update:model-value="errorMessage = ''"
                 />
                 <p class="vk-links" role="group" aria-label="Быстрый выбор примера сообщества">
-                    <button type="button" class="vk-link" @click="fillPreset('durov')">Durov</button>
+                    <button type="button" class="vk-link" @click="fillPreset('habr')">Habr</button>
+                    <button type="button" class="vk-link" @click="fillPreset('vandroukiru')">Vandrouki.ru</button>
                     <button type="button" class="vk-link" @click="fillPreset('vk')">VK</button>
-                    <button type="button" class="vk-link" @click="fillPreset('mdk')">MDK</button>
                 </p>
             </div>
 

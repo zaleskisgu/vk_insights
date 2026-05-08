@@ -132,6 +132,7 @@ final class LiveDashboardFixtureProvider implements DashboardFixtureProvider
                 likes: $p->likes,
                 comments: $p->comments,
                 post_id: $p->post_id,
+                owner_id: $p->owner_id,
             );
         }
 

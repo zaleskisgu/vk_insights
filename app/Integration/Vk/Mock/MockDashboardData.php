@@ -60,11 +60,11 @@ final class MockDashboardData
      *     members_count: int,
      *     summary: array<string, mixed>,
      *     daily: list<array{date: string, avg_engagement: int, posts_count: int}>,
-     *     top_posts: list<array{rank: int, engagement: int, text: string, date: string, likes: int, comments: int, post_id: int}>,
+     *     top_posts: list<array{rank: int, engagement: int, text: string, date: string, likes: int, comments: int, post_id: int, owner_id: int}>,
      *     content_types: list<array{type: string, label: string, count: int}>
      * }
      */
-    public static function build(Carbon $from, Carbon $to): array
+    public static function build(Carbon $from, Carbon $to, int $wallOwnerId = -1): array
     {
         $fromDay = $from->copy()->startOfDay();
         $toDay = $to->copy()->startOfDay();
@@ -117,6 +117,7 @@ final class MockDashboardData
                 'likes' => $likes,
                 'comments' => $comments,
                 'post_id' => self::TOP_POST_IDS[$i],
+                'owner_id' => $wallOwnerId,
             ];
         }
 
@@ -168,12 +169,13 @@ final class MockDashboardData
      *     likes: int,
      *     comments: int,
      *     reposts: int,
-     *     engagement: int
+     *     engagement: int,
+     *     owner_id: int
      * }>
      */
-    public static function allPosts(Carbon $from, Carbon $to, string $groupSeed = ''): array
+    public static function allPosts(Carbon $from, Carbon $to, string $groupSeed = '', int $wallOwnerId = -1): array
     {
-        $fixture = self::build($from, $to);
+        $fixture = self::build($from, $to, $wallOwnerId);
         $fromDay = $from->copy()->startOfDay();
         $toDay = $to->copy()->startOfDay();
         $seed = $fromDay->format('Y-m-d').'|'.$toDay->format('Y-m-d').'|'.hash('sha256', $groupSeed);
@@ -253,6 +255,7 @@ final class MockDashboardData
 
             $out[] = [
                 'post_id' => $postId,
+                'owner_id' => $wallOwnerId,
                 'date' => $dates[$g],
                 'type' => $type,
                 'label' => $labels[$type],

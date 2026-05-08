@@ -8,7 +8,7 @@ use App\Data\Dashboard\TopPostRowData;
 final class TopPostsDashboardService
 {
     /**
-     * @return list<array{rank: int, engagement: int, text: string, date: string, likes: int, comments: int, post_id: int}>
+     * @return list<array{rank: int, engagement: int, text: string, date: string, likes: int, comments: int, post_id: int, owner_id: int}>
      */
     public function getTopPosts(DashboardFixtureProvider $provider): array
     {

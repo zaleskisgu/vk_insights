@@ -18,6 +18,7 @@ final class MockDashboardFixtureProvider implements DashboardFixtureProvider
     public function __construct(
         private Carbon $from,
         private Carbon $to,
+        private int $wallOwnerId = -1,
     ) {
         $this->from = $from->copy()->startOfDay();
         $this->to = $to->copy()->startOfDay();
@@ -28,7 +29,7 @@ final class MockDashboardFixtureProvider implements DashboardFixtureProvider
      */
     private function payload(): array
     {
-        return $this->cached ??= MockDashboardData::build($this->from, $this->to);
+        return $this->cached ??= MockDashboardData::build($this->from, $this->to, $this->wallOwnerId);
     }
 
     public function membersCount(): int
@@ -88,6 +89,7 @@ final class MockDashboardFixtureProvider implements DashboardFixtureProvider
                 likes: (int) ($row['likes'] ?? 0),
                 comments: (int) ($row['comments'] ?? 0),
                 post_id: (int) ($row['post_id'] ?? 0),
+                owner_id: (int) ($row['owner_id'] ?? $this->wallOwnerId),
             );
         }
 
@@ -114,7 +116,7 @@ final class MockDashboardFixtureProvider implements DashboardFixtureProvider
 
     public function allPostItems(string $groupQuery): array
     {
-        $raw = MockDashboardData::allPosts($this->from, $this->to, $groupQuery);
+        $raw = MockDashboardData::allPosts($this->from, $this->to, $groupQuery, $this->wallOwnerId);
         $out = [];
         foreach ($raw as $row) {
             $out[] = PostListItemData::fromArray($row);

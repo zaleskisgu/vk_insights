@@ -19,7 +19,11 @@ const rows = computed(() => {
     const top = props.topPosts ?? [];
     const meta = props.meta ?? {};
     return top.map((row) => {
-        const href = vkWallPostUrl(meta.owner_id, row.post_id);
+        const href = vkWallPostUrl(
+            row.owner_id ?? meta.owner_id,
+            row.post_id,
+            typeof meta.screen_name === 'string' ? meta.screen_name : '',
+        );
         return {
             rank: row.rank,
             engagement: row.engagement ?? 0,

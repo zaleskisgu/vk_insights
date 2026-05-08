@@ -12,10 +12,11 @@ readonly class TopPostRowData
         public int $likes,
         public int $comments,
         public int $post_id,
+        public int $owner_id = 0,
     ) {}
 
     /**
-     * @return array{rank: int, engagement: int, text: string, date: string, likes: int, comments: int, post_id: int}
+     * @return array{rank: int, engagement: int, text: string, date: string, likes: int, comments: int, post_id: int, owner_id: int}
      */
     public function toArray(): array
     {
@@ -27,6 +28,7 @@ readonly class TopPostRowData
             'likes' => $this->likes,
             'comments' => $this->comments,
             'post_id' => $this->post_id,
+            'owner_id' => $this->owner_id,
         ];
     }
 }

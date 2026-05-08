@@ -97,7 +97,7 @@ class HttpVkClient implements VkClient
 
         $startedAt = microtime(true);
         try {
-            $httpResponse = Http::timeout(30)
+            $httpResponse = Http::timeout(120)
                 ->asForm()
                 ->post('https://api.vk.com/method/'.$method, $form);
         } catch (ConnectionException $e) {

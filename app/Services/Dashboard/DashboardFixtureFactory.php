@@ -29,10 +29,13 @@ final class DashboardFixtureFactory
         $toC = Carbon::instance($to)->startOfDay();
 
         if (config('vk.use_mock', true)) {
-            $fixture = new MockDashboardFixtureProvider($fromC, $toC);
-            $groupVk = $this->vk->getGroupById(1);
+            $groupVk = $this->vk->getGroupById($parsed->query);
             $rawFirst = $groupVk['groups'][0] ?? [];
             $first = is_array($rawFirst) ? $rawFirst : [];
+            $gid = (int) ($first['id'] ?? 0);
+            $wallOwnerId = $gid > 0 ? -$gid : ($gid !== 0 ? $gid : -1);
+
+            $fixture = new MockDashboardFixtureProvider($fromC, $toC, $wallOwnerId);
 
             return new DashboardFixtureBundle(
                 provider: $fixture,

@@ -11,6 +11,7 @@ readonly class PostListItemData
     {
         return new self(
             post_id: (int) ($row['post_id'] ?? 0),
+            owner_id: (int) ($row['owner_id'] ?? 0),
             date: (string) ($row['date'] ?? ''),
             type: (string) ($row['type'] ?? ''),
             label: (string) ($row['label'] ?? ''),
@@ -24,6 +25,7 @@ readonly class PostListItemData
 
     public function __construct(
         public int $post_id,
+        public int $owner_id,
         public string $date,
         public string $type,
         public string $label,
@@ -37,6 +39,7 @@ readonly class PostListItemData
     /**
      * @return array{
      *     post_id: int,
+     *     owner_id: int,
      *     date: string,
      *     type: string,
      *     label: string,
@@ -51,6 +54,7 @@ readonly class PostListItemData
     {
         return [
             'post_id' => $this->post_id,
+            'owner_id' => $this->owner_id,
             'date' => $this->date,
             'type' => $this->type,
             'label' => $this->label,

@@ -33,6 +33,7 @@ final class VkWallPostNormalizer
 
         return new PostListItemData(
             post_id: (int) ($item['id'] ?? 0),
+            owner_id: (int) ($item['owner_id'] ?? 0),
             date: $date,
             type: $type,
             label: $label,
