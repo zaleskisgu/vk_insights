@@ -2,48 +2,34 @@
 
 ## О проекте
 
-Веб-приложение для аналитики публичной стены сообщества ВКонтакте: пользователь задаёт сообщество и календарный период, сервер собирает посты (через VK API или мок-данные), отдаёт JSON отчёта и показывает дашборд — KPI, графики, топ постов, таблицу «Все посты», экспорт в CSV и JSON. Исходное задание: [docs/tz.md](./docs/tz.md).
+Дашборд по стене VK за период: `wall.get` / `groups.getById`, мок или live, экспорт CSV/JSON. ТЗ: [docs/tz.md](./docs/tz.md).
 
-## Преимущества реализации
+## Плюсы
 
-- **Тесты с двух сторон:** на PHP — сервисы отчёта и дашборда, экспорт CSV, HTTP-клиент VK и (по желанию) интеграция с живым API; на фронте — Vitest на клиенте отчёта (ошибки, запросы с CSRF, скачивание экспорта). Регрессии ловятся без ручного клика по всем сценариям.
-- **Понятная архитектура:** контракт **`VkClient`**, единая сборка данных через **`DashboardFixtureFactory`** (мок и live — одни и те же сервисы дашборда), DTO в **`app/Data`**, интеграция с VK вынесена в **`app/Integration/Vk`** — проще сопровождать и подменять реализацию.
-- **Моки по умолчанию:** при **`VK_USE_MOCK=true`** дашборд и таблица постов работают без сети и без токена; для демо и CI это стабильный сценарий, live включается одной настройкой.
-- **Продакшен-практики:** кэш выборки стены с TTL, **throttle** на отчётные маршруты, CSV отдаётся **потоком** без складывания всего файла в память, для PHP подключён **PHPStan** (Larastan).
-- **Документация в репозитории:** ТЗ, карта реализации, дорожная карта и замеры производительности — в **`docs/`**, не разъезжается с кодом.
+- PHPUnit (сервисы, CSV, HttpVkClient) + опционально live; Vitest — `resources/js/api/report/*.test.js`.
+- `VkClient`, `DashboardFixtureFactory` → один путь мок/live; DTO `app/Data`; VK в `app/Integration/Vk`.
+- `VK_USE_MOCK=true` — без сети; кэш стены, `throttle`, CSV stream, `composer phpstan`.
+- Доки: `docs/` (tz, IMPLEMENTATION, ROADMAP, PERF).
 
 ## Запуск
 
-### Docker (рекомендуется)
-
-В корне репозитория:
+### Docker
 
 ```bash
 docker compose up --build
 ```
 
-**http://localhost:8080** — с хоста порт **8080** на **8000** в контейнере (в логах `0.0.0.0:8000` — это процесс внутри образа).
+URL: **http://localhost:8080** (8080→8000 в контейнере). PHP 8.4, `public/build` из образа, Redis, тома `database/`, `storage/`. Нет `.env` — [`docker/entrypoint.sh`](./docker/entrypoint.sh) копирует [`.env.example`](./.env.example) (VK уже описаны, мок по умолчанию); live-токен — в `.env`. Опционально: `./.env:/var/www/html/.env:ro`.
 
-**PHP 8.4** + фронт в образе (**`public/build`**), **Redis**, тома **`database/`** и **`storage/`**. Нет **`.env`** — [`docker/entrypoint.sh`](./docker/entrypoint.sh) копирует **[`.env.example`](./.env.example)** и выполняет ключ и миграции; переменные **VK** там уже заданы (мок по умолчанию, пример значений). Свой токен для live — в **`.env`** в каталоге проекта; при желании смонтируйте только для чтения: `./.env:/var/www/html/.env:ro`.
+Подробнее: [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md#docker).
 
-Compose, образ и переменные — [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md), раздел «Docker».
+### Локально
 
-### Локальный запуск
+`composer install` → `.env.example` → `.env`, `php artisan key:generate` → `npm install` → `npm run dev` + `php artisan serve` (`public/`). Сборка: `npm run build`. Deep link: `/?group=…&from=YYYY-MM-DD&to=YYYY-MM-DD`. Порт занят: `php -S 127.0.0.1:8090 -t public`.
 
-1. **PHP 8.4+**, в корне репозитория: `composer install`.
-2. Скопируйте **`.env.example`** → **`.env`**, выполните `php artisan key:generate`.
-3. `npm install`.
-4. Разработка: в одном терминале `npm run dev`, в другом `php artisan serve` (корень сайта — **`public/`**), обычно **http://127.0.0.1:8000**.
-5. Продакшен-сборка фронта: `npm run build`.
+## Стек / доки
 
-Прямая ссылка на отчёт: **`/?group=ид_или_имя&from=YYYY-MM-DD&to=YYYY-MM-DD`** — приложение само запросит отчёт и откроет дашборд.
+Laravel 13, PHP 8.4, Vue 3, Vite, PrimeVue, Chart.js; только `routes/web.php` (CSRF на POST).
 
-На Windows при проблемах с портами можно поднять встроенный сервер PHP: `php -S 127.0.0.1:8090 -t public`.
-
-## Стек и документация
-
-**Backend:** Laravel (PHP 8.4), интеграция с VK (`groups.getById`, `wall.get`), кэш, валидация периода. **Frontend:** Vue 3, Vite, SCSS, PrimeVue, Chart.js. Маршруты в **`web`** (сессия, CSRF для POST), без отдельного `api.php`.
-
-Структура кода, все эндпоинты, слой VK (мок и live), переменные окружения, команды тестов и статического анализа, Docker и локальная разработка расписаны здесь: **[docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md)**.
-
-Оптимизации фронтенда и замеры — **[docs/PERF.md](./docs/PERF.md)**.
+[docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md) — дерево, команды, API, VK, Docker, env.  
+[docs/PERF.md](./docs/PERF.md) — Lighthouse.
