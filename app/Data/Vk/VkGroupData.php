@@ -9,17 +9,36 @@ readonly class VkGroupData
      */
     public static function fromVkApiArray(array $row): self
     {
+        $p50 = self::normalizePhotoUrl(isset($row['photo_50']) ? (string) $row['photo_50'] : '');
+        $p100 = self::normalizePhotoUrl(isset($row['photo_100']) ? (string) $row['photo_100'] : '');
+        $p200 = self::normalizePhotoUrl(isset($row['photo_200']) ? (string) $row['photo_200'] : '');
+        $p200 ??= $p100 ?? $p50;
+
         return new self(
             id: (int) ($row['id'] ?? 0),
             name: (string) ($row['name'] ?? ''),
             screen_name: (string) ($row['screen_name'] ?? ''),
             is_closed: (int) ($row['is_closed'] ?? 0),
             type: (string) ($row['type'] ?? 'group'),
-            photo_50: isset($row['photo_50']) ? (string) $row['photo_50'] : null,
-            photo_100: isset($row['photo_100']) ? (string) $row['photo_100'] : null,
-            photo_200: isset($row['photo_200']) ? (string) $row['photo_200'] : null,
+            photo_50: $p50,
+            photo_100: $p100,
+            photo_200: $p200,
             members_count: isset($row['members_count']) ? (int) $row['members_count'] : null,
         );
+    }
+
+    private static function normalizePhotoUrl(string $raw): ?string
+    {
+        $url = trim($raw);
+        if ($url === '') {
+            return null;
+        }
+
+        if (str_starts_with($url, 'http://')) {
+            $url = 'https://'.substr($url, strlen('http://'));
+        }
+
+        return $url;
     }
 
     public function __construct(

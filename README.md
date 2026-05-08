@@ -21,13 +21,24 @@
 - **Документация по коду:** [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md), план: [docs/ROADMAP.md](./docs/ROADMAP.md), оптимизации и замеры сборки: [docs/PERF.md](./docs/PERF.md).
 - **Заголовок вкладки и фавикон:** по умолчанию в [`resources/views/app.blade.php`](./resources/views/app.blade.php); после открытия отчёта заголовок меняется в Vue ([`resources/js/App.vue`](./resources/js/App.vue)) — подробности в IMPLEMENTATION, раздел «Фронтенд».
 
+### Docker (одна команда)
+
+В корне репозитория: **`docker compose up --build`** ([`docker-compose.yml`](./docker-compose.yml)). Кратко здесь; подробности по составу образа и переменным — [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md), раздел «Docker».
+
+- **Браузер:** **http://localhost:8080** — с хоста порт **8080** проброшен на **8000** в контейнере. Строка в логах «Server running on http://0.0.0.0:8000» относится к процессу **внутри** контейнера; с ПК открывайте **localhost:8080**, а не `0.0.0.0:8000`.
+- **Сервисы:** **`app`** (образ из [`Dockerfile`](./Dockerfile): PHP **8.4**; отдельная стадия Node выполняет **`npm ci`** и **`npm run build`**, в финальный образ попадает **`public/build`**) и **`redis`**. В Compose для приложения заданы **`CACHE_STORE=redis`** и **`REDIS_HOST=redis`**. Redis с машины: **127.0.0.1:6379**.
+- **Данные:** тома Compose для **`database/`** (SQLite) и **`storage/`**. При старте [`docker/entrypoint.sh`](./docker/entrypoint.sh) при отсутствии `.env` копирует `.env.example`, создаёт ключ, выполняет **`migrate`**, запускает **`php artisan serve`**.
+- **Образы:** базовые образы тянутся из **AWS Public ECR** (`public.ecr.aws/docker/library/…`), чтобы реже получать **429** при анонимном pull с Docker Hub.
+- **Секреты VK:** свой **`.env`** в каталоге проекта; при необходимости смонтировать в **`app`**: **`./.env:/var/www/html/.env:ro`**.
+
 ### Локальный запуск
 
 1. Рабочий каталог — **корень репозитория** (где лежат `artisan`, `composer.json`, `package.json`).
-2. `composer install`, скопировать `.env.example` → `.env`, `php artisan key:generate`.
+2. Установленный **PHP 8.4+** (см. [`composer.json`](./composer.json)), затем `composer install`, скопировать `.env.example` → `.env`, `php artisan key:generate`.
 3. `npm install`.
 4. Разработка: в одном терминале **`npm run dev`**, в другом **`php artisan serve`** (или свой хост с корнем **`public/`**). Открыть URL Laravel (часто `http://127.0.0.1:8000`).
 5. Продакшен-сборка фронта без `npm run dev`: **`npm run build`**.
+6. Прямая ссылка на отчёт в браузере: **`/?group=ид_или_имя&from=YYYY-MM-DD&to=YYYY-MM-DD`** — приложение само запросит **`GET /report`** с этими параметрами и покажет дашборд (без повторной отправки формы).
 
 ### Команды
 

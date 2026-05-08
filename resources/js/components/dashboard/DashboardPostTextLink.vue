@@ -5,11 +5,10 @@ import { vkWallPostUrl } from '@/utils/vkWallPostUrl.js';
 const props = defineProps({
     ownerId: { type: [Number, String], default: undefined },
     postId: { type: [Number, String], default: undefined },
-    screenName: { type: String, default: '' },
     text: { type: String, default: '' },
 });
 
-const href = computed(() => vkWallPostUrl(props.ownerId, props.postId, props.screenName));
+const href = computed(() => vkWallPostUrl(props.ownerId, props.postId));
 </script>
 
 <template>

@@ -23,9 +23,9 @@ final class MockGroupsGetByIdResponse
             screen_name: 'mockgroup',
             is_closed: 0,
             type: 'group',
-            photo_50: '/media/vk/group-photo.svg',
-            photo_100: '/media/vk/group-photo.svg',
-            photo_200: '/media/vk/group-photo.svg',
+            photo_50: '',
+            photo_100: '',
+            photo_200: '',
             members_count: null,
         );
 

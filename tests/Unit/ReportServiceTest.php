@@ -46,7 +46,8 @@ class ReportServiceTest extends TestCase
         $this->assertSame('igm', $result['meta']['screen_name']);
         $this->assertSame('2026-01-16', $result['meta']['from']);
         $this->assertSame('2026-01-18', $result['meta']['to']);
-        $this->assertSame('https://example.com/photo.jpg', $result['meta']['photo_200']);
+        $this->assertIsString($result['meta']['photo_200']);
+        $this->assertStringStartsWith('data:image/svg+xml;base64,', $result['meta']['photo_200']);
         $this->assertFalse($result['meta']['truncated']);
         $this->assertNull($result['meta']['posts_limit']);
         $this->assertArrayHasKey('summary', $result);

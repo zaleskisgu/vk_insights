@@ -39,6 +39,7 @@
 - **Живой отчёт:** [`WallPostsForReportLoader`](../app/Services/Vk/WallPostsForReportLoader.php) — `groups.getById` + постраничный `wall.get`; лимиты страниц и размера страницы задаются в [`config/vk.php`](../config/vk.php) (**`vk.wall.max_pages`**, **`vk.wall.page_size`**, env **`VK_WALL_MAX_PAGES`**, **`VK_WALL_PAGE_SIZE`**). Если выборка обрезана лимитом, в [`DashboardFixtureBundle`](../app/Services/Dashboard/DashboardFixtureBundle.php) и **`meta`** отчёта попадают **`truncated`** и **`posts_limit`**. Фильтр постов по периоду. При **`VK_USE_MOCK=false`**, **`VK_CACHE_TTL` > 0** и настроенном store результат **`group` + нормализованные посты + флаги обрезки** кэшируется [`WallPostsForPeriodCache`](../app/Integration/Vk/Support/WallPostsForPeriodCache.php) с ключом вида `vk:wall:{owner_key}:{from}:{to}` и блокировкой от stampede (`Cache::lock`). Драйвер — **`CACHE_STORE`** ([`config/cache.php`](../config/cache.php)), TTL — [`config/vk.php`](../config/vk.php) (`VK_CACHE_TTL`, по умолчанию 1200 с).
 - **Дашборд из живой стены:** [`LiveDashboardFixtureProvider`](../app/Integration/Vk/Support/LiveDashboardFixtureProvider.php) поверх списка постов из лоадера.
 - Сборка «мок или live» для отчёта и таблицы постов: [`DashboardFixtureFactory`](../app/Services/Dashboard/DashboardFixtureFactory.php) → [`DashboardFixtureBundle`](../app/Services/Dashboard/DashboardFixtureBundle.php); сервисы [`ReportService`](../app/Services/ReportService.php) и [`ReportPostsService`](../app/Services/Posts/ReportPostsService.php) не дублируют разветвление по **`vk.use_mock`**.
+- В режиме мока **`meta.photo_200`** подменяется в фабрике на SVG data URL с инициалами из ввода ([`MockCommunityAvatar`](../app/Integration/Vk/Mock/MockCommunityAvatar.php)); URL вида **`/media/vk/group-photo.svg`** больше не используется. Реальное фото из VK — только при **`VK_USE_MOCK=false`** (ответ **`groups.getById`**).
 - [`AppServiceProvider`](../app/Providers/AppServiceProvider.php): **`VkClient`** — `MockVkClient` или `HttpVkClient` (+ **`VkApiCallStats`**); синглтоны **`WallPostsForPeriodCache`**, **`WallPostsForReportLoader`**.
 - **Наблюдаемость VK:** middleware [`LogVkApiCallStats`](../app/Http/Middleware/LogVkApiCallStats.php) (глобально в `bootstrap/app.php`) пишет в канал **`vk`** ([`config/logging.php`](../config/logging.php)); в **`local`** добавляет заголовки **`X-Vk-Calls`**, **`X-Vk-Total-Ms`** к ответу, если были вызовы API.
 
@@ -55,7 +56,7 @@
 
 ### Структура экранов и компонентов
 
-- [`App.vue`](../resources/js/App.vue): оболочка [`AppHeader`](../resources/js/components/layout/AppHeader.vue), `<main id="vk-main" tabindex="-1">`; стартовый экран или дашборд по наличию `report`; дашборд — **`defineAsyncComponent`** + **`Suspense`** (ленивый чанк, см. [PERF.md](./PERF.md)); **`document.title`**: на старте **`VK Insights`**, при отчёте **`VK Insights - {имя группы} - {период дд.мм.гггг — дд.мм.гггг}`** ([`formatPeriodRu`](../resources/js/utils/dashboardFormat.js)).
+- [`App.vue`](../resources/js/App.vue): оболочка [`AppHeader`](../resources/js/components/layout/AppHeader.vue), `<main id="vk-main" tabindex="-1">`; стартовый экран или дашборд по наличию `report`; при открытии с **`?group=&from=&to=`** ([`readReportQuery`](../resources/js/utils/reportUrl.js)) сразу **`GET /report`** и показ «Загрузка отчёта…» (`bootstrapping`), без моргания формы; дашборд — **`defineAsyncComponent`** + **`Suspense`** (ленивый чанк, см. [PERF.md](./PERF.md)); **`document.title`**: на старте **`VK Insights`**, при отчёте **`VK Insights - {имя группы} - {период дд.мм.гггг — дд.мм.гггг}`** ([`formatPeriodRu`](../resources/js/utils/dashboardFormat.js)).
 - **Старт:** [`StartScreen.vue`](../resources/js/screens/StartScreen.vue) — hero (`<section>` + `h1`), форма анализа внутри **`<form novalidate @submit.prevent>`** (поля, `fieldset` для периода, пресеты в `<p role="group">`), запрос дашборда через [`fetchReportDashboard`](../resources/js/api/report/reportHttp.js) (**`GET /report`** с query `group`, **`from`**, **`to`** как **`YYYY-MM-DD`**), loading / ошибка (`role="alert"`, `aria-live="polite"`).
 - **Дашборд:** [`DashboardScreen.vue`](../resources/js/screens/DashboardScreen.vue) — `<section aria-labelledby>` + скрытый **`h1.vk-sr-only`** с названием сообщества и периодом; при **`meta.truncated`** — предупреждение о неполной выборке стены (класс **`.vk-dashboard-truncated`**); при пустых **`daily`** и **`top_posts`** — сообщение **`.vk-dashboard-empty`**, графики и таблицы скрыты (профиль и KPI остаются); блоки:
   - [`DashboardProfileCard.vue`](../resources/js/components/dashboard/DashboardProfileCard.vue) — `<section>`, имя как **`h2`**, аватар с осмысленным `alt`, кнопка **«Экспорт»** + всплывающее **`Menu`**: пункты «Скачать CSV» и «Скачать JSON»; [`reportExportDownload`](../resources/js/api/report/reportExportDownload.js) + **`triggerBrowserDownload`** (тот же файл), ошибки под кнопкой;
@@ -66,7 +67,7 @@
 
 ### Утилиты и мелкие компоненты
 
-- [`vkWallPostUrl.js`](../resources/js/utils/vkWallPostUrl.js) — ссылка `https://vk.com/wall{owner_id}_{post_id}` для таблиц постов.
+- [`vkWallPostUrl.js`](../resources/js/utils/vkWallPostUrl.js) — каноническая ссылка **`https://vk.com/wall{owner_id}_{post_id}`** (`owner_id` со знаком); в таблицах для владельца стены берётся **`meta.owner_id`** из отчёта, если есть (совпадает с `groups.getById`), иначе из строки поста.
 - [`DashboardPostTextLink.vue`](../resources/js/components/dashboard/DashboardPostTextLink.vue) — ячейка текста поста в «Все посты» (один расчёт `href`).
 - [`chartTheme.js`](../resources/js/utils/chartTheme.js) — общие цвета/легенда для Chart.js (см. также блок «Стили графиков» ниже).
 
@@ -108,7 +109,17 @@
 
 ## Локальный запуск
 
-См. [README](../README.md): `composer install`, `npm install`, `.env`; для разработки — `npm run dev` и сервер Laravel (`php artisan serve` или аналог).
+См. [README](../README.md): **PHP 8.4+**, `composer install`, `npm install`, `.env`; для разработки — `npm run dev` и сервер Laravel (`php artisan serve` или аналог).
+
+## Docker
+
+Файлы в корне репозитория: [`docker-compose.yml`](../docker-compose.yml) (сервисы **`redis`** и **`app`**), [`Dockerfile`](../Dockerfile), [`docker/entrypoint.sh`](../docker/entrypoint.sh).
+
+- **Запуск одной командой:** `docker compose up --build` (см. README).
+- **Фронт в образе:** многостадийная сборка — стадия Node выполняет **`npm ci`** и **`npm run build`**, финальный образ PHP получает только **`public/build`** (отдельно `npm run dev` в контейнере не нужен).
+- **PHP:** образ на базе **php:8.4-cli**; расширения: intl, pdo_sqlite, zip, redis (phpredis); для сборки **pdo_sqlite** в образ ставится **`libsqlite3-dev`**.
+- **Окружение:** в Compose у **`app`** заданы **`APP_URL=http://localhost:8080`**, **`REDIS_HOST=redis`**, **`CACHE_STORE=redis`**, **`SESSION_DRIVER=file`**, **`QUEUE_CONNECTION=sync`**, **`DB_CONNECTION=sqlite`** — они перекрывают значения из `.env` при работе в контейнере.
+- **Порты:** с хоста приложение доступно на **http://localhost:8080** (`8080:8000`).
 
 ## Переменные окружения (backend)
 

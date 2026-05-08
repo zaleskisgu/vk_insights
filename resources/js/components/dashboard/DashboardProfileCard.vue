@@ -89,6 +89,8 @@ async function runExport(format) {
                         class="vk-dash-profile__avatar"
                         width="56"
                         height="56"
+                        referrerpolicy="no-referrer"
+                        decoding="async"
                     />
                     <div v-else class="vk-dash-profile__avatar vk-dash-profile__avatar--placeholder" aria-hidden="true" />
                     <div class="vk-dash-profile__text">

@@ -9,7 +9,7 @@ import { pushPathWithoutQuery, readReportQuery, replacePathWithoutQuery } from '
 const DashboardScreen = defineAsyncComponent(() => import('@/screens/DashboardScreen.vue'));
 
 const report = ref(null);
-const bootstrapping = ref(false);
+const bootstrapping = ref(!!readReportQuery());
 
 async function syncReportFromUrl() {
     const q = readReportQuery();
@@ -25,13 +25,16 @@ async function syncReportFromUrl() {
     }
 }
 
-function onPopState() {
-    syncReportFromUrl();
+async function onPopState() {
+    if (readReportQuery()) {
+        bootstrapping.value = true;
+    }
+    await syncReportFromUrl();
+    bootstrapping.value = false;
 }
 
 onMounted(async () => {
     if (readReportQuery()) {
-        bootstrapping.value = true;
         await syncReportFromUrl();
         bootstrapping.value = false;
     }

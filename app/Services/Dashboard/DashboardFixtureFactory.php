@@ -3,6 +3,7 @@
 namespace App\Services\Dashboard;
 
 use App\Contracts\VkClient;
+use App\Integration\Vk\Mock\MockCommunityAvatar;
 use App\Integration\Vk\Mock\MockDashboardFixtureProvider;
 use App\Integration\Vk\Support\LiveDashboardFixtureProvider;
 use App\Integration\Vk\Support\VkGroupInputParser;
@@ -32,6 +33,11 @@ final class DashboardFixtureFactory
             $groupVk = $this->vk->getGroupById($parsed->query);
             $rawFirst = $groupVk['groups'][0] ?? [];
             $first = is_array($rawFirst) ? $rawFirst : [];
+            $avatarLabel = $parsed->displayHint !== '' ? $parsed->displayHint : (string) ($first['name'] ?? '');
+            $avatarUrl = MockCommunityAvatar::dataUrlFromLabel($avatarLabel);
+            $first['photo_50'] = $avatarUrl;
+            $first['photo_100'] = $avatarUrl;
+            $first['photo_200'] = $avatarUrl;
             $gid = (int) ($first['id'] ?? 0);
             $wallOwnerId = $gid > 0 ? -$gid : ($gid !== 0 ? $gid : -1);
 

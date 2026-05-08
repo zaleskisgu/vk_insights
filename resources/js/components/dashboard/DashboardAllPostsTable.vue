@@ -245,9 +245,8 @@ onBeforeUnmount(() => {
                     >
                         <template #body="{ data }">
                             <DashboardPostTextLink
-                                :owner-id="data.owner_id ?? meta.owner_id"
+                                :owner-id="meta.owner_id ?? data.owner_id"
                                 :post-id="data.post_id"
-                                :screen-name="typeof meta.screen_name === 'string' ? meta.screen_name : ''"
                                 :text="data.text ?? ''"
                             />
                         </template>

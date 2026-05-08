@@ -1,0 +1,39 @@
+services:
+  redis:
+    # Зеркало Docker Official Image (меньше 429 Docker Hub без docker login)
+    image: public.ecr.aws/docker/library/redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8000"
+    environment:
+      APP_URL: http://localhost:8080
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_CLIENT: phpredis
+      CACHE_STORE: redis
+      SESSION_DRIVER: file
+      QUEUE_CONNECTION: sync
+      DB_CONNECTION: sqlite
+    volumes:
+      - app-database:/var/www/html/database
+      - app-storage:/var/www/html/storage
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  app-database:
+  app-storage:
